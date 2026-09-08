@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno — NUNCA subir al repo
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Certificados y claves
+*.pem
+*.key
+*.cert
+global-bundle.pem
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Uploads locales
+uploads/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/settings.json

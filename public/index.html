@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario Nube — Los Rojos</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ── TOAST CONTAINER ───────────────────────────────────── -->
+  <div id="toast-container"></div>
+
+  <!-- ── LOGIN ─────────────────────────────────────────────── -->
+  <div id="pantalla-login" class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">📦</div>
+        <h1>Inventario Nube</h1>
+        <p class="subtitulo">Sistema de Gestión de Inventarios</p>
+      </div>
+      <form id="form-login">
+        <div class="input-group">
+          <label for="login-correo">Correo electrónico</label>
+          <input type="email" id="login-correo" placeholder="admin@empresa.com" autocomplete="username" required />
+        </div>
+        <div class="input-group">
+          <label for="login-password">Contraseña</label>
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-primary full-width" style="margin-top:.5rem">
+          <span id="login-btn-text">Iniciar sesión</span>
+        </button>
+        <p id="login-error" class="error-msg hidden" style="justify-content:center;margin-top:.5rem"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── APP PRINCIPAL ─────────────────────────────────────── -->
+  <div id="pantalla-app" class="hidden">
+
+    <!-- Barra lateral -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="brand-icon">📦</div>
+          <div>
+            <div class="brand-text">Inventario</div>
+            <div class="brand-sub">Los Rojos</div>
+          </div>
+        </div>
+      </div>
+
+      <nav>
+        <div class="nav-section">Principal</div>
+        <button class="nav-btn active" data-vista="dashboard">
+          <span class="nav-icon">🏠</span><span>Dashboard</span>
+        </button>
+        <button class="nav-btn" data-vista="productos">
+          <span class="nav-icon">🗂</span><span>Productos</span>
+        </button>
+        <button class="nav-btn" data-vista="movimientos">
+          <span class="nav-icon">↕️</span><span>Movimientos</span>
+        </button>
+        <button class="nav-btn" data-vista="pedidos">
+          <span class="nav-icon">🛒</span>
+          <span>Pedidos</span>
+          <span class="nav-badge" id="nav-badge-pedidos"></span>
+        </button>
+
+        <div class="nav-section" style="margin-top:.5rem">Analítica</div>
+        <button class="nav-btn" data-vista="reportes">
+          <span class="nav-icon">📊</span><span>Reportes</span>
+        </button>
+
+        <div class="nav-section admin-only" style="margin-top:.5rem">Administración</div>
+        <button class="nav-btn admin-only" data-vista="categorias">
+          <span class="nav-icon">🏷</span><span>Categorías</span>
+        </button>
+        <button class="nav-btn admin-only" data-vista="usuarios">
+          <span class="nav-icon">👥</span><span>Usuarios</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="usuario-info">
+          <div class="usuario-avatar" id="usuario-avatar">?</div>
+          <div class="usuario-datos">
+            <span id="usuario-nombre"></span>
+            <span id="usuario-rol" class="badge"></span>
+          </div>
+        </div>
+        <button id="btn-cambiar-password" class="btn-logout" style="margin-bottom:.4rem">
+          <span>🔑</span><span>Cambiar contraseña</span>
+        </button>
+        <button id="btn-logout" class="btn-logout">
+          <span>🚪</span><span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Contenido principal -->
+    <div class="contenido">
+      <!-- Topbar -->
+      <div class="topbar">
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-actions" id="topbar-actions"></div>
+      </div>
+
+      <!-- Vistas -->
+      <div class="vista-body">
+
+        <!-- Dashboard -->
+        <section id="vista-dashboard" class="vista">
+          <div class="tarjetas">
+            <div class="tarjeta">
+              <div class="tarjeta-icon blue">🗂</div>
+              <div class="tarjeta-info">
+                <span class="tarjeta-num" id="num-productos">—</span>
+                <span class="tarjeta-label">Productos activos</span>
+              </div>
+            </div>
+            <div class="tarjeta alerta">
+              <div class="tarjeta-icon red">⚠️</div>
+              <div class="tarjeta-info">
+                <span class="tarjeta-num" id="num-faltantes">—</span>
+                <span class="tarjeta-label">Bajo mínimo</span>
+              </div>
+            </div>
+            <div class="tarjeta">
+              <div class="tarjeta-icon orange">↕️</div>
+              <div class="tarjeta-info">
+                <span class="tarjeta-num" id="num-movimientos">—</span>
+                <span class="tarjeta-label">Movimientos hoy</span>
+              </div>
+            </div>
+            <div class="tarjeta">
+              <div class="tarjeta-icon green">🛒</div>
+              <div class="tarjeta-info">
+                <span class="tarjeta-num" id="num-pedidos">—</span>
+                <span class="tarjeta-label">Pedidos pendientes</span>
+              </div>
+            </div>
+          </div>
+          <div class="seccion">
+            <div class="seccion-header">
+              <h3>⚠️ Productos bajo mínimo</h3>
+              <button class="btn-secondary btn-sm" onclick="Nav.ir('pedidos')">Ver pedidos →</button>
+            </div>
+            <div class="seccion-body">
+              <div id="tabla-faltantes-dash"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Productos -->
+        <section id="vista-productos" class="vista hidden">
+          <div class="productos-toolbar">
+            <div class="search-wrap" style="flex:1;min-width:200px;margin-bottom:0">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="buscar-producto" placeholder="Buscar por nombre, código o categoría…" class="input-buscar" />
+            </div>
+            <div style="display:flex;gap:.4rem">
+              <button class="btn-vista active" id="btn-vista-cards" onclick="Productos.toggleVista('cards')">⊞ Cards</button>
+              <button class="btn-vista" id="btn-vista-tabla" onclick="Productos.toggleVista('tabla')">☰ Tabla</button>
+            </div>
+          </div>
+          <div class="seccion">
+            <div class="seccion-body">
+              <div id="tabla-productos"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Movimientos -->
+        <section id="vista-movimientos" class="vista hidden">
+          <!-- Filtros -->
+          <div class="filtros-mov seccion" style="margin-bottom:1rem">
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;padding:1rem 1.25rem">
+              <label style="display:flex;flex-direction:column;gap:.3rem;font-size:.78rem;font-weight:600;color:var(--texto-sec);text-transform:uppercase">
+                Tipo
+                <select id="filtro-tipo-mov" class="select-filtro">
+                  <option value="">Todos</option>
+                  <option value="entrada">🟢 Entrada</option>
+                  <option value="salida">🔴 Salida</option>
+                  <option value="ajuste">🟡 Ajuste</option>
+                </select>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:.3rem;font-size:.78rem;font-weight:600;color:var(--texto-sec);text-transform:uppercase">
+                Desde
+                <input type="date" id="filtro-desde-mov" class="input-fecha" />
+              </label>
+              <label style="display:flex;flex-direction:column;gap:.3rem;font-size:.78rem;font-weight:600;color:var(--texto-sec);text-transform:uppercase">
+                Hasta
+                <input type="date" id="filtro-hasta-mov" class="input-fecha" />
+              </label>
+              <button class="btn-primary btn-sm" id="btn-filtrar-mov">🔍 Filtrar</button>
+              <button class="btn-secondary btn-sm" id="btn-limpiar-mov">✕ Limpiar</button>
+              <div style="margin-left:auto">
+                <button class="btn-secondary btn-sm" id="btn-export-mov">⬇ Exportar CSV</button>
+              </div>
+            </div>
+          </div>
+          <div class="seccion">
+            <div class="seccion-body">
+              <div id="tabla-movimientos"></div>
+            </div>
+          </div>
+          <div id="paginacion-mov" class="paginacion"></div>
+        </section>
+
+        <!-- Pedidos -->
+        <section id="vista-pedidos" class="vista hidden">
+          <div class="seccion">
+            <div class="seccion-header">
+              <h3>🛒 Pedidos automáticos generados por faltantes de stock</h3>
+            </div>
+            <div class="seccion-body">
+              <div id="tabla-pedidos"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Reportes -->
+        <section id="vista-reportes" class="vista hidden">
+          <div class="tabs">
+            <button class="tab active" data-tab="faltantes">⚠️ Faltantes</button>
+            <button class="tab" data-tab="sobrantes">📈 Sobrantes</button>
+            <button class="tab" data-tab="gastos">💸 Gastos</button>
+            <button class="tab" data-tab="corte">📋 Corte diario</button>
+          </div>
+          <div id="tab-faltantes" class="tab-content">
+            <div id="reporte-faltantes"></div>
+          </div>
+          <div id="tab-sobrantes" class="tab-content hidden">
+            <div id="reporte-sobrantes"></div>
+          </div>
+          <div id="tab-gastos" class="tab-content hidden">
+            <div class="filtros-rango">
+              <label>Desde<input type="date" id="gastos-desde" /></label>
+              <label>Hasta<input type="date" id="gastos-hasta" /></label>
+              <button class="btn-primary" id="btn-gastos">🔍 Consultar</button>
+            </div>
+            <div id="reporte-gastos"></div>
+          </div>
+          <div id="tab-corte" class="tab-content hidden">
+            <div class="filtros-rango">
+              <label>Fecha<input type="date" id="corte-fecha" /></label>
+              <button class="btn-primary" id="btn-corte">🔍 Consultar</button>
+            </div>
+            <div id="reporte-corte"></div>
+          </div>
+        </section>
+
+        <!-- Categorías -->
+        <section id="vista-categorias" class="vista hidden">
+          <div class="seccion">
+            <div class="seccion-body">
+              <div id="tabla-categorias"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Usuarios -->
+        <section id="vista-usuarios" class="vista hidden">
+          <div class="seccion">
+            <div class="seccion-body">
+              <div id="tabla-usuarios"></div>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /vista-body -->
+    </div><!-- /contenido -->
+  </div><!-- /pantalla-app -->
+
+  <!-- ── MODAL GENÉRICO ────────────────────────────────────── -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal-box">
+      <div class="modal-header">
+        <span class="modal-title" id="modal-title-text"></span>
+        <button id="modal-cerrar" class="modal-cerrar" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-contenido"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/productos.js"></script>
+  <script src="js/movimientos.js"></script>
+  <script src="js/pedidos.js"></script>
+  <script src="js/reportes.js"></script>
+  <script src="js/categorias.js"></script>
+  <script src="js/usuarios.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
