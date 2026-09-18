@@ -30,7 +30,7 @@ REPO_URL="https://github.com/Angektam/Computo-en-la-nube--Servidor.git"
 REPO_BRANCH="main"
 
 REGION="us-east-1"
-INSTANCE_TYPE="t2.micro"
+INSTANCE_TYPE="t3.micro"
 APP_NAME="inventario-nube"
 
 # ─── Base de datos RDS existente ──────────────────────────────
