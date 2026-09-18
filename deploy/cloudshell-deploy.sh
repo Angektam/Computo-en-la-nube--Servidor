@@ -149,7 +149,7 @@ if [ -z "$ROLE_EXISTS" ]; then
         "Action":"sts:AssumeRole"
       }]
     }' \
-    --description "Rol EC2 para ${APP_NAME} — mínimo privilegio" \
+    --description "Rol EC2 para ${APP_NAME} - minimo privilegio" \
     --output text >/dev/null
 
   # Política: solo leer/escribir en el bucket de la app
