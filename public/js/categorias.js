@@ -47,7 +47,7 @@ const Categorias = (() => {
   async function cargar() {
     const c = document.getElementById('tabla-categorias');
     if (!c) return;
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon"><span class="spinner" style="width:1.5rem;height:1.5rem;border-color:rgba(0,0,0,.15);border-top-color:var(--rojo);display:inline-block"></span></div><p>Cargando…</p></div>`;
+    mostrarCargando('tabla-categorias');
     try {
       todas = await api.get('/categorias');
       renderTabla(todas);

@@ -69,6 +69,19 @@ router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next
  */
 router.put('/:id', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
   const { nombre, descripcion, categoria_id, precio, stock_minimo, unidad } = req.body;
+
+  if (!nombre || nombre.toString().trim() === '') {
+    return res.status(400).json({ error: 'El nombre es obligatorio' });
+  }
+  const precioNum    = parseFloat(precio);
+  const minimoNum    = parseInt(stock_minimo);
+  if (isNaN(precioNum) || precioNum < 0) {
+    return res.status(400).json({ error: 'El precio debe ser un número mayor o igual a 0' });
+  }
+  if (isNaN(minimoNum) || minimoNum < 0) {
+    return res.status(400).json({ error: 'El stock mínimo debe ser un número mayor o igual a 0' });
+  }
+
   try {
     const { rows } = await pool.query(`
       UPDATE productos
@@ -76,7 +89,8 @@ router.put('/:id', permitirRoles('administrador', 'bodega'), async (req, res, ne
           stock_minimo=$5, unidad=$6, actualizado_en=NOW()
       WHERE id=$7 AND activo=TRUE
       RETURNING *
-    `, [nombre, descripcion, categoria_id, precio, stock_minimo, unidad, req.params.id]);
+    `, [nombre.toString().trim(), descripcion || null, categoria_id || null,
+        precioNum, minimoNum, unidad || 'pieza', req.params.id]);
 
     if (!rows[0]) return res.status(404).json({ error: 'Producto no encontrado' });
     res.json(rows[0]);

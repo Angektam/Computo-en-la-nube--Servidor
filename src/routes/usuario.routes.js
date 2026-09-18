@@ -98,7 +98,11 @@ router.delete('/:id', permitirRoles('administrador'), async (req, res, next) => 
     return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
   }
   try {
-    await pool.query('UPDATE usuarios SET activo=FALSE WHERE id=$1', [req.params.id]);
+    const { rowCount } = await pool.query(
+      'UPDATE usuarios SET activo=FALSE WHERE id=$1 AND activo=TRUE',
+      [req.params.id]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado o ya desactivado' });
     res.json({ mensaje: 'Usuario desactivado' });
   } catch (err) { next(err); }
 });

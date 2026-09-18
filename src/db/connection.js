@@ -11,8 +11,11 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   user:     process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  // Supabase requiere SSL en la conexión directa
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  // SSL: en producción (RDS/Supabase) usa rejectUnauthorized:true para verificar el cert del servidor.
+  // Solo desactiva la verificación si DB_SSL_REJECT_UNAUTHORIZED=false está explícitamente en .env.
+  ssl: process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+    : false,
   max: 10,
   idleTimeoutMillis:    30000,
   connectionTimeoutMillis: 5000,

@@ -18,13 +18,18 @@ const Pedidos = (() => {
     cancelado: [],
   };
 
+  // Mejora #5: estado actualmente visible
+  let estadoActual = 'pendiente';
+
   function renderTabla(pedidos) {
     const c = document.getElementById('tabla-pedidos');
     if (!pedidos.length) {
       c.innerHTML = `
         <div class="empty-state" style="padding:3rem">
           <div class="empty-icon">🛒</div>
-          <p>No hay pedidos pendientes. ¡El inventario está en orden!</p>
+          <p>${estadoActual === 'pendiente'
+            ? 'No hay pedidos pendientes. ¡El inventario está en orden!'
+            : `No hay pedidos con estado "${estadoActual}".`}</p>
         </div>`;
       return;
     }
@@ -66,19 +71,22 @@ const Pedidos = (() => {
       </div>`;
   }
 
-  async function cargar() {
+  async function cargar(estado = estadoActual) {
+    estadoActual = estado;
     const c = document.getElementById('tabla-pedidos');
     if (!c) return;
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon"><span class="spinner" style="width:1.5rem;height:1.5rem;border-color:rgba(0,0,0,.15);border-top-color:var(--rojo);display:inline-block"></span></div><p>Cargando pedidos…</p></div>`;
+    mostrarCargando('tabla-pedidos', 'Cargando pedidos…');
     try {
-      const { total, pedidos } = await api.get('/reportes/pedidos');
+      const { total, pedidos } = await api.get(`/reportes/pedidos?estado=${estado}`);
       renderTabla(pedidos);
 
-      // Actualizar badge en sidebar
+      // Actualizar badge en sidebar (solo cuenta pendientes)
       const badge = document.getElementById('nav-badge-pedidos');
       if (badge) {
-        badge.textContent = total;
-        badge.classList.toggle('visible', total > 0);
+        if (estado === 'pendiente') {
+          badge.textContent = total;
+          badge.classList.toggle('visible', total > 0);
+        }
       }
     } catch (err) {
       c.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><p>${err.message}</p></div>`;
@@ -89,7 +97,7 @@ const Pedidos = (() => {
     try {
       await api.patch(`/reportes/pedidos/${id}`, { estado: nuevoEstado });
       Toast.success(`Pedido marcado como "${nuevoEstado}"`);
-      cargar();
+      cargar(estadoActual);
       Dashboard.cargar();
     } catch (err) {
       Toast.error(err.message);

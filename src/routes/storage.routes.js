@@ -21,7 +21,8 @@ const REGION = process.env.AWS_REGION || 'us-east-1';
 // Multer en memoria — no guarda archivos en disco de la VM
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB máximo
+  // Mejora #2: alineado con el límite de 5 MB que avisa el frontend
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const permitidos = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.xlsx', '.csv'];
     const ext = path.extname(file.originalname).toLowerCase();

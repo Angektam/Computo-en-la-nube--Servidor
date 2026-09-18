@@ -59,7 +59,7 @@ const Usuarios = (() => {
   async function cargar() {
     const c = document.getElementById('tabla-usuarios');
     if (!c) return;
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon"><span class="spinner" style="width:1.5rem;height:1.5rem;border-color:rgba(0,0,0,.15);border-top-color:var(--rojo);display:inline-block"></span></div><p>Cargando usuarios…</p></div>`;
+    mostrarCargando('tabla-usuarios', 'Cargando usuarios…');
     try {
       todos = await api.get('/usuarios');
       renderTabla(todos);
@@ -151,7 +151,10 @@ const Usuarios = (() => {
           activo: document.getElementById('u-activo').checked,
         });
         Modal.cerrar();
-        Toast.success('Usuario actualizado');
+        // Mejora #8: el JWT del usuario editado no se invalida automáticamente.
+        // Su nuevo rol/estado entrará en vigor cuando su token actual expire (máx. 8h)
+        // o cuando cierre y vuelva a iniciar sesión.
+        Toast.success('Usuario actualizado. Los cambios de rol aplican en su próxima sesión.');
         cargar();
       } catch (err) {
         errEl.textContent = err.message;

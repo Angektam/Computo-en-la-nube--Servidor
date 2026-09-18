@@ -104,7 +104,7 @@ const Productos = (() => {
   async function cargar() {
     const c = document.getElementById('tabla-productos');
     if (!c) return;
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon"><span class="spinner" style="width:1.5rem;height:1.5rem;border-color:rgba(0,0,0,.15);border-top-color:var(--rojo);display:inline-block"></span></div><p>Cargando productos…</p></div>`;
+    mostrarCargando('tabla-productos', 'Cargando productos…');
     try {
       todos = await api.get('/productos');
       render(todos);
@@ -128,8 +128,13 @@ const Productos = (() => {
     vistaActual = v;
     document.getElementById('btn-vista-cards')?.classList.toggle('active', v === 'cards');
     document.getElementById('btn-vista-tabla')?.classList.toggle('active', v === 'tabla');
+    // Mejora #7: usar el mismo criterio de búsqueda (nombre + código + categoría)
     const q = document.getElementById('buscar-producto')?.value.toLowerCase() || '';
-    render(q ? todos.filter(p => p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)) : todos);
+    render(q ? todos.filter(p =>
+      p.nombre.toLowerCase().includes(q) ||
+      p.codigo.toLowerCase().includes(q) ||
+      (p.categoria && p.categoria.toLowerCase().includes(q))
+    ) : todos);
   }
 
   // ── Ver detalle producto ────────────────────────────────────

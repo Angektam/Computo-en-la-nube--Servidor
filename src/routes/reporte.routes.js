@@ -5,22 +5,36 @@ const { verificarToken, permitirRoles } = require('../middleware/auth.middleware
 
 router.use(verificarToken);
 
+// ── Helper: rango de fechas con valor por defecto últimos 30 días ──────
+function rangoFechas(query) {
+  const desde = query.desde || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const hasta = query.hasta || new Date().toISOString().slice(0, 10);
+  return { desde, hasta };
+}
+
+const ESTADOS_PEDIDO = ['pendiente', 'enviado', 'recibido', 'cancelado'];
+
+// ── Query reutilizable de faltantes ───────────────────────────────────
+async function queryFaltantes() {
+  return pool.query(`
+    SELECT p.id, p.codigo, p.nombre, p.stock_actual, p.stock_minimo,
+           (p.stock_minimo - p.stock_actual) AS faltante,
+           c.nombre AS categoria
+    FROM   productos p
+    LEFT JOIN categorias c ON p.categoria_id = c.id
+    WHERE  p.stock_actual < p.stock_minimo
+      AND  p.activo = TRUE
+    ORDER BY faltante DESC
+  `);
+}
+
 /**
  * GET /api/reportes/faltantes
  * Productos con stock_actual < stock_minimo (alerta de existencias mínimas).
  */
 router.get('/faltantes', async (_req, res, next) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT p.id, p.codigo, p.nombre, p.stock_actual, p.stock_minimo,
-             (p.stock_minimo - p.stock_actual) AS faltante,
-             c.nombre AS categoria
-      FROM   productos p
-      LEFT JOIN categorias c ON p.categoria_id = c.id
-      WHERE  p.stock_actual < p.stock_minimo
-        AND  p.activo = TRUE
-      ORDER BY faltante DESC
-    `);
+    const { rows } = await queryFaltantes();
     res.json({ total: rows.length, productos: rows });
   } catch (err) { next(err); }
 });
@@ -52,9 +66,7 @@ router.get('/sobrantes', async (req, res, next) => {
  * Por defecto muestra los últimos 30 días.
  */
 router.get('/movimientos', async (req, res, next) => {
-  const desde = req.query.desde
-    || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const hasta = req.query.hasta || new Date().toISOString().slice(0, 10);
+  const { desde, hasta } = rangoFechas(req.query);
 
   try {
     const { rows } = await pool.query(`
@@ -124,9 +136,7 @@ router.get('/corte-diario', permitirRoles('administrador', 'bodega'), async (req
  * Historial de gastos acumulados por período (valor de salidas por día y total).
  */
 router.get('/gastos', permitirRoles('administrador'), async (req, res, next) => {
-  const desde = req.query.desde
-    || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const hasta = req.query.hasta || new Date().toISOString().slice(0, 10);
+  const { desde, hasta } = rangoFechas(req.query);
 
   try {
     // Desglose diario de valor movido en salidas
@@ -183,19 +193,23 @@ router.get('/gastos', permitirRoles('administrador'), async (req, res, next) => 
 });
 
 /**
- * GET /api/reportes/pedidos
- * Lista los pedidos automáticos pendientes de enviar a proveedores.
+ * GET /api/reportes/pedidos?estado=pendiente
+ * Lista pedidos automáticos. Por defecto solo los pendientes.
  */
-router.get('/pedidos', permitirRoles('administrador', 'bodega'), async (_req, res, next) => {
+router.get('/pedidos', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
+  const estado = req.query.estado && ESTADOS_PEDIDO.includes(req.query.estado)
+    ? req.query.estado
+    : 'pendiente';
+
   try {
     const { rows } = await pool.query(`
       SELECT ped.*, p.codigo, p.nombre AS producto, p.stock_actual, p.stock_minimo
       FROM   pedidos ped
       JOIN   productos p ON ped.producto_id = p.id
-      WHERE  ped.estado = 'pendiente'
+      WHERE  ped.estado = $1
       ORDER BY ped.generado_en DESC
-    `);
-    res.json({ total: rows.length, pedidos: rows });
+    `, [estado]);
+    res.json({ total: rows.length, pedidos: rows, estado });
   } catch (err) { next(err); }
 });
 
@@ -205,10 +219,9 @@ router.get('/pedidos', permitirRoles('administrador', 'bodega'), async (_req, re
  */
 router.patch('/pedidos/:id', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
   const { estado } = req.body;
-  const estadosValidos = ['pendiente', 'enviado', 'recibido', 'cancelado'];
 
-  if (!estadosValidos.includes(estado)) {
-    return res.status(400).json({ error: `Estado inválido. Use: ${estadosValidos.join(', ')}` });
+  if (!ESTADOS_PEDIDO.includes(estado)) {
+    return res.status(400).json({ error: `Estado inválido. Use: ${ESTADOS_PEDIDO.join(', ')}` });
   }
 
   try {
@@ -229,8 +242,7 @@ router.patch('/pedidos/:id', permitirRoles('administrador', 'bodega'), async (re
  * Exporta movimientos a CSV.
  */
 router.get('/export/movimientos', async (req, res, next) => {
-  const desde = req.query.desde || new Date(Date.now() - 30*24*60*60*1000).toISOString().slice(0,10);
-  const hasta = req.query.hasta || new Date().toISOString().slice(0,10);
+  const { desde, hasta } = rangoFechas(req.query);
   const tipo  = req.query.tipo;
 
   const condiciones = [`m.fecha BETWEEN $1::date AND $2::date + INTERVAL '1 day'`];
@@ -274,15 +286,7 @@ router.get('/export/movimientos', async (req, res, next) => {
  */
 router.get('/export/faltantes', async (_req, res, next) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT p.codigo, p.nombre, c.nombre AS categoria,
-             p.stock_actual, p.stock_minimo,
-             (p.stock_minimo - p.stock_actual) AS faltante
-      FROM productos p
-      LEFT JOIN categorias c ON p.categoria_id = c.id
-      WHERE p.stock_actual < p.stock_minimo AND p.activo = TRUE
-      ORDER BY faltante DESC
-    `);
+    const { rows } = await queryFaltantes();
 
     const cab = 'Código,Nombre,Categoría,Stock actual,Stock mínimo,Faltante';
     const lin = rows.map(r =>

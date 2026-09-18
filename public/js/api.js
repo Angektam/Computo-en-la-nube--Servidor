@@ -35,12 +35,29 @@ const api = {
   delete: (ruta)          => apiFetch(ruta, { method: 'DELETE' }),
 
   // Subida de archivos (multipart)
-  upload: (ruta, formData) => {
+  // Mejora #4: verificar r.ok antes de parsear para no silenciar errores HTTP
+  upload: async (ruta, formData) => {
     const token = getToken();
-    return fetch(`${API_BASE}${ruta}`, {
+    const r = await fetch(`${API_BASE}${ruta}`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      body: formData
-    }).then(r => r.json());
+      body: formData,
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+    return data;
   }
 };
+
+// Mejora #6: helper centralizado para el spinner de carga (evita copypaste en todos los módulos)
+function mostrarCargando(elementId, mensaje = 'Cargando…') {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">
+        <span class="spinner" style="width:1.5rem;height:1.5rem;border-color:rgba(0,0,0,.15);border-top-color:var(--rojo);display:inline-block"></span>
+      </div>
+      <p>${mensaje}</p>
+    </div>`;
+}

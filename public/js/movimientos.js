@@ -88,7 +88,7 @@ const Movimientos = (() => {
     paginaActual = page;
     const c = document.getElementById('tabla-movimientos');
     if (!c) return;
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon"><span class="spinner" style="width:1.5rem;height:1.5rem;border-color:rgba(0,0,0,.15);border-top-color:var(--rojo);display:inline-block"></span></div><p>Cargando…</p></div>`;
+    mostrarCargando('tabla-movimientos');
     try {
       const resp = await api.get(`/movimientos?${buildQuery(page)}`);
       // Soporte respuesta paginada { datos, total, paginas } o array simple (retrocompat.)

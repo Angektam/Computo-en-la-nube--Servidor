@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inventario Nube — Los Rojos</title>
+  <!-- Mejora #10: favicon inline con SVG (no requiere archivo externo) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23d63031'/><text y='.9em' x='50%' text-anchor='middle' font-size='65'>📦</text></svg>" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -142,6 +144,8 @@
               </div>
             </div>
           </div>
+          <!-- Mejora #11: hora de última actualización -->
+          <p id="dashboard-actualizado" style="font-size:.75rem;color:var(--texto-sec);margin-bottom:1rem;text-align:right"></p>
           <div class="seccion">
             <div class="seccion-header">
               <h3>⚠️ Productos bajo mínimo</h3>
@@ -211,6 +215,21 @@
 
         <!-- Pedidos -->
         <section id="vista-pedidos" class="vista hidden">
+          <!-- Mejora #5: filtro por estado para ver historial -->
+          <div class="filtros-mov seccion" style="margin-bottom:1rem">
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;padding:1rem 1.25rem">
+              <label style="display:flex;flex-direction:column;gap:.3rem;font-size:.78rem;font-weight:600;color:var(--texto-sec);text-transform:uppercase">
+                Estado
+                <select id="filtro-estado-pedido" class="select-filtro">
+                  <option value="pendiente">⏳ Pendientes</option>
+                  <option value="enviado">📤 Enviados</option>
+                  <option value="recibido">✅ Recibidos</option>
+                  <option value="cancelado">❌ Cancelados</option>
+                </select>
+              </label>
+              <button class="btn-primary btn-sm" id="btn-filtrar-pedidos">🔍 Filtrar</button>
+            </div>
+          </div>
           <div class="seccion">
             <div class="seccion-header">
               <h3>🛒 Pedidos automáticos generados por faltantes de stock</h3>

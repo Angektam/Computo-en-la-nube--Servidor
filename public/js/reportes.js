@@ -6,11 +6,7 @@ const Reportes = (() => {
   const fmt = v => `$${Number(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
   function cargando(id) {
-    document.getElementById(id).innerHTML = `
-      <div class="empty-state" style="padding:2rem">
-        <div class="empty-icon"><span class="spinner" style="width:1.5rem;height:1.5rem;border-color:rgba(0,0,0,.15);border-top-color:var(--rojo);display:inline-block"></span></div>
-        <p>Cargando…</p>
-      </div>`;
+    mostrarCargando(id);
   }
 
   function exportarFaltantes() {

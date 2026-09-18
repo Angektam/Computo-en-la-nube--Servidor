@@ -71,14 +71,21 @@ router.get('/', async (req, res, next) => {
 router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
   const { producto_id, tipo, cantidad, motivo } = req.body;
 
+  // Mejora #9: validar tipos antes de llegar a PostgreSQL
+  const pid = parseInt(producto_id);
+  const qty = parseInt(cantidad);
+
   if (!producto_id || !tipo || !cantidad) {
     return res.status(400).json({ error: 'producto_id, tipo y cantidad son obligatorios' });
+  }
+  if (isNaN(pid) || pid <= 0) {
+    return res.status(400).json({ error: 'producto_id debe ser un número entero positivo' });
   }
   if (!['entrada', 'salida', 'ajuste'].includes(tipo)) {
     return res.status(400).json({ error: 'Tipo inválido. Use: entrada, salida o ajuste' });
   }
-  if (cantidad <= 0) {
-    return res.status(400).json({ error: 'La cantidad debe ser mayor a 0' });
+  if (isNaN(qty) || qty <= 0) {
+    return res.status(400).json({ error: 'La cantidad debe ser un entero mayor a 0' });
   }
 
   const client = await pool.connect();
@@ -88,7 +95,7 @@ router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next
     // Bloquea la fila del producto para evitar condiciones de carrera
     const { rows: prod } = await client.query(
       'SELECT stock_actual FROM productos WHERE id=$1 FOR UPDATE',
-      [producto_id]
+      [pid]
     );
     if (!prod[0]) throw Object.assign(new Error('Producto no encontrado'), { status: 404 });
 
@@ -96,37 +103,41 @@ router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next
     let stockDespues;
 
     if (tipo === 'entrada') {
-      stockDespues = stockAntes + cantidad;
+      stockDespues = stockAntes + qty;
     } else if (tipo === 'salida') {
-      if (stockAntes < cantidad) throw Object.assign(new Error('Stock insuficiente'), { status: 400 });
-      stockDespues = stockAntes - cantidad;
+      if (stockAntes < qty) throw Object.assign(new Error('Stock insuficiente'), { status: 400 });
+      stockDespues = stockAntes - qty;
     } else {
       // ajuste: la cantidad representa el nuevo stock total
-      stockDespues = cantidad;
+      stockDespues = qty;
     }
 
     // Actualizar stock
     await client.query(
       'UPDATE productos SET stock_actual=$1, actualizado_en=NOW() WHERE id=$2',
-      [stockDespues, producto_id]
+      [stockDespues, pid]
     );
 
     // Registrar movimiento
     const { rows } = await client.query(`
       INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad, stock_antes, stock_despues, motivo)
       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *
-    `, [producto_id, req.usuario.id, tipo, cantidad, stockAntes, stockDespues, motivo]);
+    `, [pid, req.usuario.id, tipo, qty, stockAntes, stockDespues, motivo]);
 
     // Si el stock queda por debajo del mínimo, generar pedido automático
+    // Solo si NO existe ya un pedido pendiente para este producto (evita duplicados)
     const { rows: prod2 } = await client.query(
-      'SELECT stock_minimo FROM productos WHERE id=$1', [producto_id]
+      'SELECT stock_minimo FROM productos WHERE id=$1', [pid]
     );
     if (stockDespues < prod2[0].stock_minimo) {
       const sugerido = prod2[0].stock_minimo * 2;
       await client.query(`
         INSERT INTO pedidos (producto_id, cantidad_sugerida)
-        VALUES ($1, $2)
-      `, [producto_id, sugerido]);
+        SELECT $1, $2
+        WHERE NOT EXISTS (
+          SELECT 1 FROM pedidos WHERE producto_id = $1 AND estado = 'pendiente'
+        )
+      `, [pid, sugerido]);
     }
 
     await client.query('COMMIT');

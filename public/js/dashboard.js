@@ -28,6 +28,12 @@ const Dashboard = (() => {
       set('num-movimientos', corte.resumen.total_movimientos || 0);
       set('num-pedidos',     pedidos.total);
 
+      // Mejora #11: mostrar hora de última actualización
+      const tsEl = document.getElementById('dashboard-actualizado');
+      if (tsEl) {
+        tsEl.textContent = `Actualizado: ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+      }
+
       // Actualizar color tarjeta faltantes
       const cardFaltantes = document.getElementById('card-faltantes');
       if (cardFaltantes) {

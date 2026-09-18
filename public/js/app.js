@@ -121,10 +121,20 @@ const Nav = (() => {
     if (vista === 'dashboard')   Dashboard.cargar();
     if (vista === 'productos')   { Categorias.cargar(); Productos.cargar(); }
     if (vista === 'movimientos') { Productos.cargar(); Movimientos.cargar(1); }
-    if (vista === 'pedidos')     Pedidos.cargar();
+    if (vista === 'pedidos')     Pedidos.cargar('pendiente');
     if (vista === 'reportes')    Reportes.cargar();
     if (vista === 'categorias')  Categorias.cargar();
     if (vista === 'usuarios')    Usuarios.cargar();
+
+    // Mejora #5: activar filtro de pedidos la primera vez que se abre la vista
+    if (vista === 'pedidos') {
+      const sel = document.getElementById('filtro-estado-pedido');
+      const btn = document.getElementById('btn-filtrar-pedidos');
+      if (btn && !btn._bound) {
+        btn._bound = true;
+        btn.addEventListener('click', () => Pedidos.cargar(sel?.value || 'pendiente'));
+      }
+    }
   }
 
   return { ir };
@@ -135,6 +145,8 @@ document.getElementById('btn-cambiar-password')?.addEventListener('click', () =>
   const usuario = Auth.getUsuario();
   const esAdmin = Auth.tieneRol('administrador');
 
+  // Mejora #8: advertir al admin que la sesión actual no refleja cambios de rol
+  // hasta que el usuario afectado vuelva a iniciar sesión (el JWT no se invalida).
   Modal.abrir(`
     <div class="form-modal">
       ${!esAdmin ? `
@@ -215,7 +227,7 @@ const App = (() => {
     }
 
     // Cargar pedidos para mostrar badge
-    Pedidos.cargar();
+    Pedidos.cargar('pendiente');
 
     Nav.ir('dashboard');
   }
