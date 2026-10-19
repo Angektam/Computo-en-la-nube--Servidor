@@ -1,0 +1,153 @@
+B02 · ACTIVIDAD DYNAMODB — EQUIPO LOS ROJOS
+Sistema: Inventario Nube (gestión de inventario para pequeños negocios)
+============================================================
+
+1. TRES CONSULTAS FRECUENTES
+-----------------------------
+
+Q1 (LA MÁS FRECUENTE):
+   Dado producto_id → obtener todos sus movimientos ordenados por fecha descendente.
+   Frecuencia: cada registro de entrada/salida en caja y bodega la dispara en tiempo real.
+
+Q2:
+   Dado producto_id → obtener el pedido pendiente más reciente.
+   Frecuencia: alta — el sistema la ejecuta cada vez que se registra una salida
+   para evitar crear pedidos duplicados.
+
+Q3:
+   Dado un rango de fechas (desde–hasta) → obtener todos los movimientos
+   (para reportes de gastos / corte diario).
+   Frecuencia: periódica — la genera el módulo de Reportes y el corte diario.
+
+
+2. CLAVE DE PARTICIÓN Y DE ORDENAMIENTO
+-----------------------------------------
+
+  Partition key (PK): producto_id   (String)
+  Sort key      (SK): fecha         (String) — formato "ISO-8601#movimiento_id"
+                      Ejemplo: "2026-10-14T09:15:00Z#MOV-8810"
+
+Justificación:
+  - Q1 se resuelve con PK = producto_id + ORDER BY SK DESC: DynamoDB localiza
+    la partición directamente y devuelve los ítems ya ordenados sin escanear la tabla.
+  - Q2 añade tipo = "salida" como filtro dentro de la misma partición;
+    el acceso sigue siendo O(1) de partición + O(k) de resultados.
+  - Q3 se resuelve con el GSI_fecha (ver punto 4).
+
+Por qué SK compuesta "ISO-8601#movimiento_id" y no solo "ISO-8601":
+  Con fecha como única SK, si dos movimientos del mismo producto ocurren
+  en el mismo segundo (ej. dos salidas simultáneas en una tienda con doble
+  caja) el segundo put-item sobrescribe al primero: DynamoDB interpreta
+  (producto_id, fecha_identica) como el mismo ítem y lo reemplaza.
+  Añadir "#movimiento_id" garantiza unicidad sin perder el orden cronológico,
+  porque la parte ISO-8601 del prefijo sigue siendo lexicográficamente ordenable.
+
+
+3. TRES ELEMENTOS DE EJEMPLO (datos ficticios)
+------------------------------------------------
+
+Elemento 1:
+  producto_id   : PROD-0042
+  fecha         : 2026-10-14T09:15:00Z#MOV-8810       ← SK compuesta
+  movimiento_id : MOV-8810
+  tipo          : salida
+  cantidad      : 12
+  stock_antes   : 80
+  stock_despues : 68
+  usuario_id    : USR-003
+  motivo        : Venta mostrador
+  fecha_dia     : 2026-10-14                           ← atributo para el GSI
+
+Elemento 2:
+  producto_id   : PROD-0042
+  fecha         : 2026-10-13T14:30:00Z#MOV-8801
+  movimiento_id : MOV-8801
+  tipo          : entrada
+  cantidad      : 50
+  stock_antes   : 30
+  stock_despues : 80
+  usuario_id    : USR-001
+  motivo        : Reposición proveedor
+  fecha_dia     : 2026-10-13
+
+Elemento 3:
+  producto_id   : PROD-0017
+  fecha         : 2026-10-14T11:00:00Z#MOV-8815
+  movimiento_id : MOV-8815
+  tipo          : ajuste
+  cantidad      : -3
+  stock_antes   : 15
+  stock_despues : 12
+  usuario_id    : USR-001
+  motivo        : Merma por caducidad
+  fecha_dia     : 2026-10-14
+
+
+4. CONSULTA QUE NO SE RESUELVE CON LA CLAVE → ÍNDICE SECUNDARIO
+-----------------------------------------------------------------
+
+Q3 (rango de fechas global para reportes) NO puede resolverse solo con
+PK = producto_id porque el reporte cubre TODOS los productos en un intervalo
+de tiempo: no hay ningún producto_id fijo que filtrar.
+
+Sin un índice, la única opción es un Scan completo de la tabla — prohibitivo
+a escala (ver cálculo de costo en la sección 8 del reporte).
+
+Solución implementada: Global Secondary Index (GSI)
+
+  Nombre del GSI : GSI_fecha
+  PK del GSI     : fecha_dia  (YYYY-MM-DD, atributo derivado al insertar)
+  SK del GSI     : fecha      (String — mismo valor que la SK de la tabla base)
+  Proyección     : ALL (todos los atributos replicados en el índice)
+
+  Se añade el atributo fecha_dia (fecha truncada al día) al ítem al momento
+  de escribirlo. El GSI permite hacer:
+
+    Query sobre GSI_fecha:
+      KeyConditionExpression: fecha_dia = :dia
+    para el corte diario exacto, o iterar por días para rangos:
+
+    Para Q3 (14-oct al 15-oct):
+      Iteración 1: fecha_dia = '2026-10-14'
+      Iteración 2: fecha_dia = '2026-10-15'
+      Combinar resultados en la aplicación.
+
+  Alternativa de diseño (no elegida): pre-agregar los totales diarios en
+  una tabla separada "resumen_diario" en cada escritura — lectura de reporte
+  casi gratis pero mayor complejidad en la capa de escritura.
+
+El GSI se creó junto con la tabla en aws-practica07-dynamodb.sh.
+
+
+5. COMPARACIÓN CON EL MODELO RELACIONAL (T1 / PRÁCTICA 6)
+-----------------------------------------------------------
+
+El catálogo de PRODUCTOS conviene quedarse en PostgreSQL (relaciones con
+categorías, precios, imagen_url, consultas ad-hoc por rol).
+
+La tabla de MOVIMIENTOS es la candidata ideal para no-relacional porque:
+  - Es de solo-escritura y crece sin límite.
+  - Siempre se consulta por producto + fecha.
+  - No requiere JOINs.
+  Ese es exactamente el patrón de acceso que DynamoDB optimiza con PK + SK.
+
+
+6. CÓDIGO CON ROL DE SERVICIO
+-------------------------------
+
+El código Python (operaciones_dynamodb.py) usa boto3 sin llaves de acceso.
+Las credenciales las provee automáticamente el Instance Metadata Service (IMDS)
+de la EC2 que tiene adjunto el Instance Profile ip-rol-ec2-s3-los-rojos.
+
+El rol fue ampliado (ampliar-rol-dynamodb.sh) para incluir la política
+pol-inline-dynamodb-los-rojos con permisos:
+  dynamodb:PutItem, GetItem, UpdateItem, DeleteItem, Query, Scan, DescribeTable
+  sobre arn:aws:dynamodb:us-east-1:*:table/movimientos_inventario e índices.
+
+boto3 resuelve las credenciales en este orden (credential chain):
+  1. Variables de entorno (no hay)
+  2. Archivo ~/.aws/credentials (no hay en la EC2)
+  3. Instance Metadata Service → asume el rol → credenciales temporales ✔
+
+El método boto3.client('sts').get_caller_identity() devuelve un ARN con
+"assumed-role" que confirma que las credenciales vienen del rol, no de llaves.
