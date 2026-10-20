@@ -75,20 +75,29 @@ const TODAS = fs.existsSync(CAPS_DIR)
 // TODAS[44] 202319 = C2: Q2 Count=1 + bash c2 Q1 (otra ejecucion)
 // TODAS[45] 202327 = C2: Q1 items MOV-8810
 
+// Índices en TODAS (50 archivos, ordenados por nombre):
+// TODAS[0..45]  = capturas originales 2026-10-15 (mismas de antes)
+// TODAS[46] 150701 = setup nuevo: header + tabla eliminada + JSON creando SK+GSI
+// TODAS[47] 150705 = setup nuevo: JSON completo GSI_fecha PAY_PER_REQUEST
+// TODAS[48] 150717 = setup nuevo: tabla ACTIVE + GSI_fecha ACTIVE + diseño de clave
+// TODAS[49] 150749 = rol: 2 políticas inline + detalle dynamodb 7 acciones
+
 const CAPTURAS = [
-  TODAS[0],   //  1: setup-A: tabla creando (JSON)
-  TODAS[1],   //  2: setup-B: tabla ACTIVE + PAY_PER_REQUEST + GSI_fecha
-  TODAS[2],   //  3: C1-A: 3 inserts completados (SK compuesta visible)
-  TODAS[3],   //  4: C1-B: verificacion query Count=2
-  TODAS[8],   //  5: C2-A: Q1 MOV-8810 y MOV-8801 ambos visibles
-  TODAS[10],  //  6: C2-B: Q2 Count=1 ScannedCount=2
-  TODAS[14],  //  7: C3-A: estado ANTES (motivo=Venta mostrador stock_despues=68)
-  TODAS[16],  //  8: C3-B: UpdateItem resultado (motivo corregida, stock=67)
-  TODAS[24],  //  9: C4-A: GetItem MOV-8815 existe (Merma por caducidad)
-  TODAS[26],  // 10: C4-B: DeleteItem ejecutado con atributos ALL_OLD devueltos
-  TODAS[27],  // 11: C4-C: DeleteItem fin + GetItem vacio (confirma eliminacion)
-  TODAS[29],  // 12: C5-A: scan JSON resultado Count=1 ScannedCount=2 CapacityUnits=2.0
-  TODAS[43],  // 13: C5-B: resumen consumo con calculo de costo + TOMAR CAPTURA
+  TODAS[46],  //  1: setup-A: tabla eliminada + JSON creando con SK compuesta y GSI
+  TODAS[47],  //  2: setup-B: JSON completo GSI_fecha + BillingMode=PAY_PER_REQUEST
+  TODAS[48],  //  3: setup-C: tabla ACTIVE + GSI_fecha ACTIVE + diseño de clave
+  TODAS[49],  //  4: rol: pol-inline-dynamodb + pol-inline-s3 + 7 acciones DynamoDB
+  TODAS[2],   //  5: C1-A: 3 inserts completados
+  TODAS[3],   //  6: C1-B: verificacion query Count=2
+  TODAS[8],   //  7: C2-A: Q1 MOV-8810 y MOV-8801 ambos visibles
+  TODAS[10],  //  8: C2-B: Q2 Count=1 ScannedCount=2
+  TODAS[14],  //  9: C3-A: estado ANTES (motivo=Venta mostrador stock_despues=68)
+  TODAS[16],  // 10: C3-B: UpdateItem resultado (motivo corregida, stock=67)
+  TODAS[24],  // 11: C4-A: GetItem MOV-8815 existe (Merma por caducidad)
+  TODAS[26],  // 12: C4-B: DeleteItem ejecutado con atributos ALL_OLD devueltos
+  TODAS[27],  // 13: C4-C: DeleteItem fin + GetItem vacio (confirma eliminacion)
+  TODAS[29],  // 14: C5-A: scan JSON resultado Count=1 ScannedCount=2 CapacityUnits=2.0
+  TODAS[43],  // 15: C5-B: resumen consumo con calculo de costo
 ].filter(Boolean);
 
 console.log("  Capturas totales: " + TODAS.length + ", seleccionadas: " + CAPTURAS.length);
@@ -318,10 +327,14 @@ children.push(
     [28, 36, 36]
   ),
   br(),
-  p([rb("Captura - "), r("Tabla creada: estado ACTIVE, modo PAY_PER_REQUEST")], AlignmentType.LEFT),
-  img("Tabla ACTIVE PAY_PER_REQUEST", 540, 260),
+  p([rb("Captura setup-A - "), r("Tabla eliminada y recreando con SK compuesta + GSI")], AlignmentType.LEFT),
+  img("Setup: tabla eliminada + JSON creando SK compuesta y GSI_fecha", 540, 280),
   br(),
-  img("Tabla ACTIVE confirmada", 540, 200)
+  p([rb("Captura setup-B - "), r("JSON completo: GSI_fecha, BillingMode=PAY_PER_REQUEST, ARN")], AlignmentType.LEFT),
+  img("Setup: JSON GSI_fecha CREATING PAY_PER_REQUEST ARN tabla", 540, 280),
+  br(),
+  p([rb("Captura setup-C - "), r("Tabla ACTIVE + GSI_fecha ACTIVE + diseno de clave documentado")], AlignmentType.LEFT),
+  img("Setup: tabla ACTIVE GSI_fecha ACTIVE diseno PK SK GSI", 540, 260)
 );
 
 // --- 4. C1: INSERT -----------------------------------------------------------
@@ -362,6 +375,9 @@ children.push(
     r("Añadir "), rc("#MOV-XXXX"), r(" garantiza unicidad sin perder el orden cronologico "),
     r("(el prefijo ISO-8601 sigue siendo lexicograficamente ordenable)."),
   ]),
+  br(),
+  p([rb("Captura rol - "), r("pol-inline-dynamodb-los-rojos + pol-inline-s3-los-rojos adjuntas al rol EC2")], AlignmentType.LEFT),
+  img("Rol: 2 politicas inline dynamodb y s3 + 7 acciones DynamoDB detalle", 540, 320),
   br(),
   h2("Elementos insertados"),
   tabla(
