@@ -1,0 +1,7 @@
+TS: Que conviene desacoflar (Mier 28)
+
+Identifica un Proceso de tu proyecto que haga esperar al usuario y explica cómo cambiaría su experiencia si se ejecutara de forma asincróna. Indica qué se pierde a cambio.
+
+Meta: Cuartilla mínimo (con un diagrama de Flujo Sencillo)
+
+Es Involucral (cada miembro del equipo debe presentar un acceso diferente)

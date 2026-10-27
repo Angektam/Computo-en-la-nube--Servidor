@@ -204,6 +204,84 @@ echo "    · EC2/RDS condicionado a etiqueta equipo=$EQUIPO"
 echo "    · Logs limitados al grupo /aws/* de la región $REGION"
 
 # =============================================================================
+# PASO 04b - Política para arquitectura con acceso a red e infraestructura
+# =============================================================================
+echo ""
+echo "========================================"
+echo "PASO 04b · Creando política de arquitectura"
+echo "========================================"
+
+POL_ARQ_NAME="pol-arquitectura-$EQUIPO"
+
+POLITICA_ARQ='{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DescribirRedEInfraestructura",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSecurityGroupRules",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeInternetGateways",
+        "ec2:DescribeNatGateways",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeLoadBalancers",
+        "ec2:DescribeTags",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:DescribeListeners",
+        "rds:DescribeDBInstances",
+        "rds:DescribeDBSubnetGroups",
+        "rds:ListTagsForResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/equipo": "'"$EQUIPO"'"
+        }
+      }
+    }
+  ]
+}'
+
+POLITICA_ARQ_ARN=$(aws iam list-policies \
+  --scope Local \
+  --query "Policies[?PolicyName=='$POL_ARQ_NAME'].Arn" \
+  --output text)
+
+if [ -z "$POLITICA_ARQ_ARN" ]; then
+  POLITICA_ARQ_ARN=$(aws iam create-policy \
+    --policy-name "$POL_ARQ_NAME" \
+    --description "Lectura de infraestructura de red para rol de arquitectura - $EQUIPO" \
+    --policy-document "$POLITICA_ARQ" \
+    --query "Policy.Arn" \
+    --output text)
+  echo "  ✔ Política creada: $POL_ARQ_NAME"
+else
+  echo "  · Política ya existía: $POL_ARQ_NAME"
+fi
+
+echo "    ARN: $POLITICA_ARQ_ARN"
+
+aws iam attach-group-policy \
+  --group-name "$GRP_ARQ" \
+  --policy-arn "$POLITICA_ARQ_ARN"
+echo "  ✔ Política adjuntada a $GRP_ARQ"
+
+echo ""
+echo "  ── Explicación de la política $POL_ARQ_NAME ──"
+echo "  Permite a usr-kevin (vía grp-arquitectura) describir toda la red:"
+echo "    · VPC, Subnets, Route Tables, Internet/NAT Gateways"
+echo "    · Security Groups y sus reglas"
+echo "    · Load Balancers (Classic, ALB, NLB) y Target Groups"
+echo "    · Instancias RDS y sus Subnet Groups"
+echo "  Restricción: condición aws:ResourceTag/equipo=$EQUIPO en todos los recursos"
+
+# =============================================================================
 # PASO 04 - Política para desarrollo con restricción por etiqueta de equipo
 # =============================================================================
 echo ""
@@ -578,6 +656,7 @@ echo "  Automatizado en este script:"
 echo "  [✔] Paso 01 · Tabla de acciones por rol (impresa arriba)"
 echo "  [✔] Paso 02 · ReadOnlyAccess amplio retirado de grp-doc, grp-arq, grp-dev"
 echo "  [✔] Paso 03 · Política $POL_DOC_NAME → adjuntada a $GRP_DOC"
+echo "  [✔] Paso 04b· Política $POL_ARQ_NAME → adjuntada a $GRP_ARQ"
 echo "  [✔] Paso 04 · Política $POL_DEV_NAME (con Deny + restricción por etiqueta)"
 echo "               → adjuntada a $GRP_DEV"
 echo "  [✔] Paso 05 · Prueba de denegación ejecutada (crear bucket → AccessDenied)"

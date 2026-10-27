@@ -1,0 +1,60 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "GestionS3ProyectoEquipo",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": [
+                "arn:aws:s3:::inventario-archivos-losrojos",
+                "arn:aws:s3:::inventario-archivos-losrojos/*"
+            ]
+        },
+        {
+            "Sid": "DescribirRecursosEquipo",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeInstances",
+                "ec2:DescribeTags",
+                "rds:DescribeDBInstances",
+                "rds:ListTagsForResource"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/equipo": "los-rojos"
+                }
+            }
+        },
+        {
+            "Sid": "MetricasCloudWatch",
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:GetMetricData",
+                "cloudwatch:GetMetricStatistics",
+                "cloudwatch:ListMetrics",
+                "logs:DescribeLogGroups",
+                "logs:GetLogEvents",
+                "logs:FilterLogEvents"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "DenegarFueraDelEquipo",
+            "Effect": "Deny",
+            "Action": [
+                "iam:*",
+                "organizations:*",
+                "account:*",
+                "billing:*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

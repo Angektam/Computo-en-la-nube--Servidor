@@ -13,7 +13,7 @@
 | **Nombre del proyecto** | Sistema de Gestión de Inventarios en la Nube |
 | **Nombre del equipo** | Los Rojos |
 | **Integrantes** | López Payán Kevin Ricardo · Flores Guevara Ángel Gabriel |
-| **Repositorio** | https://github.com/[USUARIO]/inventario-nube *(privado; docente agregada como colaboradora)* |
+| **Repositorio** | https://github.com/Angektam/Computo-en-la-nube--Servidor *(privado; docente agregada como colaboradora)* |
 | **Fecha** | Los Mochis, Sinaloa, México, 06 de octubre de 2026 |
 
 ---
@@ -224,9 +224,10 @@ Laudon, K. C., y Laudon, J. P. (2022). *Management information systems: Managing
 
 ## 12. DECLARACIÓN DE USO DE ASISTENTES DE INTELIGENCIA ARTIFICIAL
 
-| Herramienta | Apartados en los que se utilizó | Uso específico |
-|---|---|---|
-| **Kiro (Amazon)** — asistente integrado en el IDE | §3 Planteamiento del problema, §4 Justificación, §5 Objetivos, §8 Requerimientos, §9 Cronograma | Generación del borrador estructurado del documento a partir del README del proyecto y la documentación técnica existente. El equipo revisó, corrigió y validó cada sección antes de la entrega; los datos cuantitativos del planteamiento provienen de la entrevista realizada por el equipo. |
-| **GitHub Copilot** | Ninguno en este documento | Se utiliza en sesiones de codificación del proyecto; no participó en la redacción del anteproyecto. |
+| Herramienta | Uso |
+|---|---|
+| **Kiro (Amazon)** | Redacción y estructuración del documento: planteamiento del problema, justificación, objetivos, requerimientos y cronograma. |
+| **GitHub Copilot** | Generación de fragmentos de código en los scripts de despliegue e infraestructura del proyecto. |
+| **ChatGPT (OpenAI)** | Verificación de formato de citas en APA séptima edición y consulta de criterios técnicos de arquitectura en la nube. |
 
-El contenido sustantivo —identificación del problema, justificación, objetivos, requerimientos, cronograma y roles— fue revisado y aprobado íntegramente por los integrantes del equipo. Los asistentes se utilizaron como herramientas de apoyo para la estructuración y redacción inicial; no sustituyeron el juicio técnico ni la verificación de los datos por parte del equipo.
+En todos los casos, el equipo revisó, ajustó y validó el resultado antes de incorporarlo al documento.

@@ -184,3 +184,249 @@ pm2 restart inventario-api --update-env
 sudo fuser -k 3000/tcp
 pm2 restart inventario-api
 ```
+
+---
+
+## 🌐 PRÁCTICA 05 — La red del proyecto
+
+### Scripts en orden de ejecución (todos en AWS CloudShell)
+
+```bash
+# PASO 1 — Crear toda la infraestructura de red
+bash deploy/aws-practica05-vpc-red.sh
+
+# PASO 2 — Evidencias individuales por entregable
+bash deploy/evidencia-p05-e1-subredes.sh       # E1: VPC y subredes con rangos
+bash deploy/evidencia-p05-e2-tablas-ruteo.sh   # E2: Tablas de ruteo pública vs privada
+bash deploy/evidencia-p05-e3-privada-inaccesible.sh  # E3: Subred privada inalcanzable
+bash deploy/evidencia-p05-e4-security-groups.sh # E4: Reglas de tráfico por componente
+bash deploy/evidencia-p05-e5-nat-costo.sh      # E5: NAT Gateway e implicación de costo
+bash deploy/evidencia-p05-e6-diagrama-red.sh   # E6: Diagrama con IDs reales
+```
+
+### Recursos creados
+| Recurso | Nombre | CIDR / Puerto |
+|---------|--------|---------------|
+| VPC | vpc-inventario-cloud-los-rojos | 10.0.0.0/16 |
+| Subred pública | subnet-pub-inventario-cloud-los-rojos | 10.0.1.0/24 (us-east-1a) |
+| Subred privada | subnet-priv-inventario-cloud-los-rojos | 10.0.2.0/24 (us-east-1b) |
+| Internet Gateway | igw-inventario-cloud-los-rojos | — |
+| Tabla ruteo pub | rt-pub-inventario-cloud-los-rojos | 0.0.0.0/0 → IGW |
+| Tabla ruteo priv | rt-priv-inventario-cloud-los-rojos | solo local |
+| SG EC2 | sg-ec2-inventario-cloud-los-rojos | 22(IP-equipo), 80, 443, 3000 |
+| SG RDS | sg-rds-inventario-cloud-los-rojos | 5432 ← SG-EC2 |
+
+### Entregables del PDF
+| # | Entregable | Script de evidencia |
+|---|-----------|-------------------|
+| E1 | Red y subredes con rangos | `evidencia-p05-e1-subredes.sh` |
+| E2 | Dos tablas de ruteo | `evidencia-p05-e2-tablas-ruteo.sh` |
+| E3 | Subred privada inaccesible | `evidencia-p05-e3-privada-inaccesible.sh` |
+| E4 | Reglas de tráfico por componente | `evidencia-p05-e4-security-groups.sh` |
+| E5 | Respuesta Paso 6 + costo NAT | `evidencia-p05-e5-nat-costo.sh` |
+| E6 | Diagrama de red con IDs reales | `evidencia-p05-e6-diagrama-red.sh` |
+
+---
+
+## 📦 PRÁCTICA 04 — Sitio estático en S3
+
+### Bucket del sitio informativo
+```
+Nombre : sitio-inventario-cloud-los-rojos
+Región : us-east-1
+URL    : http://sitio-inventario-cloud-los-rojos.s3-website-us-east-1.amazonaws.com
+```
+
+### Flujo completo (ejecutar en orden)
+
+#### 1. Desde AWS CloudShell — crear bucket, bloqueo, website hosting, política y ciclo de vida
+```bash
+bash deploy/aws-practica04-s3-estatico.sh
+```
+
+#### 2. Desde tu máquina local — subir los archivos del sitio
+```bash
+bash deploy/p04-subir-archivos-local.sh
+```
+> Captura el HTTP 403 ANTES de aplicar la política (evidencia requerida)
+
+#### 3. Generar evidencias individuales por criterio
+```bash
+# Criterios 1 y 2: bucket, etiquetas y justificación del bloqueo
+bash deploy/evidencia-criterio-p04-bucket.sh
+
+# Criterios 3, 4 y 6: política comentada, sitio accesible y ciclo de vida
+bash deploy/evidencia-criterio-p04-sitio.sh
+
+# Criterio 5: comparación S3 vs EC2 (media cuartilla)
+bash deploy/evidencia-criterio-p04-comparacion.sh
+```
+
+### Subir archivos manualmente (sin script)
+```bash
+# Página informativa → index.html en S3
+aws s3 cp public/info.html s3://sitio-inventario-cloud-los-rojos/index.html
+
+# Estilos
+aws s3 cp public/css/styles.css s3://sitio-inventario-cloud-los-rojos/css/styles.css
+
+# Verificar objetos subidos
+aws s3 ls s3://sitio-inventario-cloud-los-rojos --recursive --human-readable
+```
+
+### Verificar sitio en línea
+```bash
+curl -I http://sitio-inventario-cloud-los-rojos.s3-website-us-east-1.amazonaws.com
+# Debe retornar HTTP/1.1 200 OK
+```
+
+### Ver política actual del bucket
+```bash
+aws s3api get-bucket-policy \
+  --bucket sitio-inventario-cloud-los-rojos \
+  --query Policy --output text | python3 -m json.tool
+```
+
+### Recursos S3 en la cuenta
+| Bucket | Uso |
+|--------|-----|
+| `inventario-archivos-losrojos` | Imágenes de productos (API) |
+| `sitio-inventario-cloud-los-rojos` | Sitio informativo estático (P04) |
+
+---
+
+## ⚡ PRÁCTICA 09 — Cómputo sin servidor: Lambda + API Gateway
+
+**Funcionalidad:** Consulta de movimientos de inventario por producto  
+**Ruta:** `GET /movimientos/{producto_id}`  
+**Tabla DynamoDB:** `movimientos_inventario`
+
+### Flujo completo (todos en AWS CloudShell)
+
+```bash
+# PASO 1 — Despliegue completo: IAM Role + Lambda + API Gateway
+bash practica09/aws-practica09-lambda.sh
+
+# PASO 2 — Evidencias por criterio (tomar captura de cada una)
+bash practica09/evidencia-p09-c1-justificacion.sh   # C1 (15 pts): funcionalidad elegida vs descartadas
+bash practica09/evidencia-p09-c2-funcion-datos.sh   # C2 (25 pts): función + rol de servicio
+bash practica09/evidencia-p09-c3-interfaz-publica.sh # C3 (20 pts): API pública responde
+bash practica09/evidencia-p09-c4-arranque-frio.sh   # C4 (20 pts): cold start vs warm start
+bash practica09/evidencia-p09-c5-costo-comparativo.sh # C5 (20 pts): Lambda vs EC2
+```
+
+> ⚠️ Para C4 (arranque en frío): esperar al menos **5-10 minutos** sin invocar la función antes de ejecutar el script.
+
+### Recursos creados
+
+| Recurso | Nombre | Valor |
+|---------|--------|-------|
+| Lambda | `fn-movimientos-los-rojos` | Python 3.12, 128 MB, 10 s |
+| Execution Role | `rol-lambda-los-rojos` | dynamodb:Query,GetItem,DescribeTable |
+| Política inline | `pol-lambda-dynamodb-los-rojos` | Solo sobre `movimientos_inventario` |
+| API Gateway | `api-inventario-cloud-los-rojos` | HTTP API v2, CORS habilitado |
+| Ruta principal | `GET /movimientos/{producto_id}` | Integración Lambda-proxy |
+| Ruta de stock | `GET /movimientos/{producto_id}/stock` | Último movimiento del producto |
+| Log group | `/aws/lambda/fn-movimientos-los-rojos` | CloudWatch Logs automático |
+
+### Comandos útiles de operación
+
+```bash
+# Invocar la función directamente (sin API Gateway)
+aws lambda invoke \
+  --function-name fn-movimientos-los-rojos \
+  --region us-east-1 \
+  --payload '{"httpMethod":"GET","path":"/movimientos/PROD-0042","pathParameters":{"producto_id":"PROD-0042"},"queryStringParameters":null,"headers":{},"requestContext":{}}' \
+  --cli-binary-format raw-in-base64-out \
+  /tmp/out.json ; cat /tmp/out.json
+
+# Ver configuración actual de la función
+aws lambda get-function-configuration \
+  --function-name fn-movimientos-los-rojos \
+  --region us-east-1 \
+  --query "{Memoria:MemorySize,Timeout:Timeout,Runtime:Runtime,Estado:State}" \
+  --output table
+
+# Ver URL de la API Gateway
+aws apigatewayv2 get-apis \
+  --region us-east-1 \
+  --query "Items[?Name=='api-inventario-cloud-los-rojos'].{Nombre:Name,URL:ApiEndpoint}" \
+  --output table
+
+# Ver logs recientes (CloudWatch)
+aws logs tail /aws/lambda/fn-movimientos-los-rojos \
+  --region us-east-1 \
+  --since 30m \
+  --format short
+
+# Ver REPORT lines (duración + memoria usada)
+aws logs filter-log-events \
+  --log-group-name /aws/lambda/fn-movimientos-los-rojos \
+  --region us-east-1 \
+  --filter-pattern "REPORT" \
+  --query "events[*].message" \
+  --output text
+
+# Actualizar código de la función (tras modificar lambda_function.py)
+cd practica09
+zip -j /tmp/fn-movimientos-los-rojos.zip lambda_function.py
+aws lambda update-function-code \
+  --function-name fn-movimientos-los-rojos \
+  --zip-file fileb:///tmp/fn-movimientos-los-rojos.zip \
+  --region us-east-1
+```
+
+### Prueba rápida desde curl
+
+```bash
+# Reemplaza <API_ID> con el ID real (lo muestra aws-practica09-lambda.sh al final)
+API_URL="https://<API_ID>.execute-api.us-east-1.amazonaws.com"
+
+# Todos los movimientos de PROD-0042
+curl -s "${API_URL}/movimientos/PROD-0042" | python3 -m json.tool
+
+# Solo el stock actual
+curl -s "${API_URL}/movimientos/PROD-0042/stock" | python3 -m json.tool
+
+# Filtrar por tipo
+curl -s "${API_URL}/movimientos/PROD-0042?tipo=salida" | python3 -m json.tool
+
+# Producto inexistente → debe devolver 404
+curl -s "${API_URL}/movimientos/PROD-9999" | python3 -m json.tool
+```
+
+### Cálculo de costo rápido (10,000 invocaciones/mes)
+
+| Concepto | Lambda | EC2 t3.micro 24/7 |
+|----------|--------|-------------------|
+| Costo cómputo | $0.0017 USD/mes | — |
+| Costo requests | $0.0020 USD/mes | — |
+| **Total** | **~$0.004 USD/mes** | **$7.59 USD/mes** |
+| Con capa gratuita | **$0.000 USD/mes** | $7.59 USD/mes |
+
+> Fuentes: [Lambda pricing](https://aws.amazon.com/lambda/pricing/) · [EC2 On-Demand us-east-1](https://aws.amazon.com/ec2/pricing/on-demand/)
+
+### Comparación: EC2 vs Lambda para esta funcionalidad
+
+| Criterio | Lambda | EC2 |
+|----------|--------|-----|
+| Costo (10K req/mes) | ~$0.004 | ~$7.59 |
+| Escala a cero | ✔ Sí | ✗ No |
+| Administración de SO | ✔ Ninguna | ✗ Parches, reinicio |
+| Cold start | ✗ ~300 ms init | ✔ Siempre caliente |
+| Tiempo de ejecución | ✔ Máx 15 min | ✔ Sin límite |
+| Adecuado para esta func. | ✔ Sí (esporádica) | ✗ Sobredimensionado |
+
+### Archivos del repositorio
+
+| Archivo | Propósito |
+|---------|-----------|
+| `practica09/lambda_function.py` | Código de la función (Python 3.12) |
+| `practica09/aws-practica09-lambda.sh` | Despliegue completo (IAM + Lambda + APIGW) |
+| `practica09/evidencia-p09-c1-justificacion.sh` | Evidencia C1 |
+| `practica09/evidencia-p09-c2-funcion-datos.sh` | Evidencia C2 |
+| `practica09/evidencia-p09-c3-interfaz-publica.sh` | Evidencia C3 |
+| `practica09/evidencia-p09-c4-arranque-frio.sh` | Evidencia C4 |
+| `practica09/evidencia-p09-c5-costo-comparativo.sh` | Evidencia C5 |
+| `generar_P09.py` | Generador del documento Word |
+| `P09_LosRojos_26oct2026.docx` | Documento de entrega |

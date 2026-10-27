@@ -1,0 +1,61 @@
+RESPUESTAS — SISTEMA DE GESTIÓN DE INVENTARIOS (LOS ROJOS)
+===========================================================
+
+
+1. MOTOR DE BASE DE DATOS Y POR QUÉ
+-------------------------------------
+Usarán PostgreSQL (relacional) en Amazon RDS, porque el sistema maneja
+entidades con relaciones claras y reglas de integridad estrictas: un
+movimiento siempre pertenece a un producto, un pedido surge de un stock
+mínimo, y un usuario tiene exactamente un rol.
+
+
+2. ¿QUÉ DEJA DE FUNCIONAR SI LA BASE CAE UNA HORA? ¿NECESITAN RÉPLICA EN ESPERA?
+----------------------------------------------------------------------------------
+Si RDS cae, el sistema queda completamente inutilizable: el login falla
+(usuarios se guardan en la BD), no se pueden registrar movimientos,
+consultar stock ni generar pedidos sugeridos. Los tres perfiles de usuario
+(administrador, bodega, cajero) quedan bloqueados.
+
+Sin embargo, para este proyecto NO necesitan réplica en espera (Multi-AZ).
+La razón es pragmática: es una miscelánea con tres empleados, no hay
+operación 24/7 crítica ni pérdida económica significativa por una hora de
+inactividad, y su OE-02 explícitamente usa db.t3.micro dentro de los
+créditos de AWS Academy. Multi-AZ duplica el costo de RDS.
+
+
+3. ¿LEE MÁS DE LO QUE ESCRIBE? ¿LES SERVIRÍA UNA RÉPLICA DE LECTURA?
+------------------------------------------------------------------------
+El sistema es predominantemente de escritura transaccional (cada venta
+genera un movimiento, que actualiza el stock, que puede generar un pedido).
+Las lecturas son consultas de inventario y reportes, pero el volumen es
+mínimo para una sola tienda con tres usuarios.
+
+NO les sirve una réplica de lectura — añadiría costo y complejidad
+innecesaria para la escala del proyecto.
+
+
+4. RPO Y RETENCIÓN DE RESPALDOS
+---------------------------------
+Su propio RNF-03 ya define esto: respaldos automáticos diarios con
+retención de 7 días. Eso implica un RPO de ~24 horas (pueden perder hasta
+un día de datos sin consecuencias graves, dado que es un sistema de prueba
+con datos ficticios durante el semestre).
+
+Para una miscelánea real en producción, 24 h sería aceptable; los datos
+más críticos (movimientos del día) se reconstruirían con el registro físico
+de respaldo que ya tienen como práctica en el negocio.
+
+
+5. ¿EN QUÉ SUBRED VA LA BASE Y QUIÉN PUEDE CONECTARSE?
+--------------------------------------------------------
+La base de datos va en la subred privada 10.0.2.0/24 (us-east-1b), sin IP
+pública ni acceso desde internet. Esto ya está definido en los scripts de
+la práctica 5.
+
+El único que puede conectarse es la EC2 que está en la subred pública
+(10.0.1.0/24), y únicamente porque tiene el security group
+sg-ec2-inventario-cloud-los-rojos autorizado explícitamente en la regla
+de entrada del sg-rds-inventario-cloud-los-rojos en el puerto 5432.
+Ningún otro origen (incluyendo la IP del equipo de desarrollo) puede
+alcanzar RDS directamente.
