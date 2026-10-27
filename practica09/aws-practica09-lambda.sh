@@ -169,10 +169,7 @@ if [ "${FN_EXISTS}" = "NO_EXISTE" ]; then
     --memory-size 128 \
     --environment "Variables={REGION=${REGION},TABLE_NAME=${TABLE_NAME},MAX_ITEMS=50}" \
     --description "P09 Los Rojos: consulta movimientos inventario en DynamoDB" \
-    --tags \
-        Equipo=LosRojos \
-        Proyecto=InventarioNube \
-        Practica=P09 \
+    --tags "Equipo=LosRojos,Proyecto=InventarioNube,Practica=P09" \
     --region "${REGION}" \
     --output table \
     --query "Configuration.{Nombre:FunctionName,Rol:Role,Memoria:MemorySize,Timeout:Timeout,Runtime:Runtime}"
