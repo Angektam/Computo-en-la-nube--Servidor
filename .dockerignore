@@ -1,0 +1,65 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  .dockerignore — inventario-nube · Equipo Los Rojos
+#  Evita copiar al contexto de construcción archivos innecesarios o
+#  peligrosos. Funciona igual que .gitignore pero para "docker build".
+# ═══════════════════════════════════════════════════════════════════════
+
+# ── Credenciales y configuración local (¡NUNCA deben entrar a la imagen!)
+# Si entran, cualquiera que descargue la imagen ve las contraseñas.
+.env
+.env.*
+!.env.example
+
+# ── Dependencias descargadas ────────────────────────────────────────────
+# Se reinstalan dentro del contenedor con "npm ci".
+# Excluirlas reduce el contexto que Docker envía al daemon y acelera la
+# construcción, especialmente en conexiones lentas o con node_modules pesado.
+node_modules/
+.venv/
+
+# ── Control de versiones ────────────────────────────────────────────────
+# El historial de Git no se necesita dentro del contenedor.
+.git/
+.gitignore
+
+# ── Editor y herramientas locales ───────────────────────────────────────
+.vscode/
+.kiro/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Carpetas de prácticas anteriores ───────────────────────────────────
+# Son scripts de infraestructura AWS, no forman parte de la aplicación.
+practica07/
+practica08/
+practica09/
+practica10/
+deploy/
+
+# ── Archivos de pruebas locales y scripts auxiliares ───────────────────
+test-local/
+scripts/
+*.sh
+*.py
+
+# ── Documentos del proyecto (reportes, evidencias, entregables) ────────
+# Los .docx y .pdf son para la clase, no para el contenedor.
+*.docx
+*.pdf
+*.txt
+*.md
+!README.md
+
+# ── Logs y archivos temporales ─────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+.npm/
+uploads/
+tmp/
+temp/
+
+# ── Archivos de configuración de paquetes innecesarios en runtime ───────
+package-lock.json.bak
