@@ -522,17 +522,17 @@ tbl5 = doc.add_table(rows=7, cols=3)
 tbl5.style = "Table Grid"
 header_row(tbl5, "Criterio", "Puntos", "Cumple")
 criterios = [
-    ("El servicio ejecuta la imagen del registro del equipo",                        "20", "si"),
-    ("La aplicacion esta en subred privada y solo se accede por el balanceador",     "20", "si"),
-    ("La configuracion se inyecta por variables de entorno",                          "15", "si"),
-    ("El rol de la tarea tiene permisos acotados",                                    "10", "si"),
-    ("Se documenta la reposicion automatica con tiempo medido y comparacion",        "25", "si"),
-    ("El servicio quedo en cero tareas al cierre",                                    "10", "si"),
+    ("El servicio ejecuta la imagen del registro del equipo",                        "20", "✔"),
+    ("La aplicacion esta en subred privada y solo se accede por el balanceador",     "20", "✔"),
+    ("La configuracion se inyecta por variables de entorno",                          "15", "✔"),
+    ("El rol de la tarea tiene permisos acotados",                                    "10", "✔"),
+    ("Se documenta la reposicion automatica con tiempo medido y comparacion",        "25", "✔"),
+    ("El servicio quedo en cero tareas al cierre",                                    "10", "✔"),
 ]
 for i, (c, p, ok) in enumerate(criterios, 1):
     data_row(tbl5, i, c, p, ok, bg="D4EDDA")
 row = tbl5.rows[6]
-for cell, text in zip(row.cells, ["Total", "100", "si"]):
+for cell, text in zip(row.cells, ["Total", "100", "✔"]):
     cell.text = ""
     run = cell.paragraphs[0].add_run(text)
     run.font.bold = True; run.font.size = Pt(10)
