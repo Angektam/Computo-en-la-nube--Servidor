@@ -337,7 +337,7 @@ SG_ECS_ID=$(aws ec2 describe-security-groups \
 if [ -z "$SG_ECS_ID" ] || [ "$SG_ECS_ID" = "None" ]; then
   SG_ECS_ID=$(aws ec2 create-security-group \
     --group-name "$SG_ECS_NAME" \
-    --description "Tareas ECS Fargate $PROYECTO — solo del ALB al puerto 3000" \
+    --description "Tareas ECS Fargate $PROYECTO - solo del ALB al puerto 3000" \
     --vpc-id "$VPC_ID" \
     --query "GroupId" --output text)
   # Inbound: puerto 3000 solo desde el SG del ALB
