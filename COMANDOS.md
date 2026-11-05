@@ -430,3 +430,115 @@ curl -s "${API_URL}/movimientos/PROD-9999" | python3 -m json.tool
 | `practica09/evidencia-p09-c5-costo-comparativo.sh` | Evidencia C5 |
 | `generar_P09.py` | Generador del documento Word |
 | `P09_LosRojos_26oct2026.docx` | Documento de entrega |
+
+---
+
+## 🐳 PRÁCTICA 11 — Ejecutar el contenedor sin administrar servidores (ECS Fargate)
+
+**Servicio:** Amazon ECS con Fargate (cómputo sin servidores para contenedores)  
+**Imagen:** `inventario-nube-losrojos:1.0.0` (publicada en ECR en la práctica 10)  
+**Balanceador:** ALB de la práctica 8 (`alb-inventario-cloud-los-rojos`)
+
+### Flujo completo (todos en AWS CloudShell)
+
+```bash
+# PASO 1 — Despliegue completo: clúster, NAT, roles, tarea, servicio
+bash practica11/aws-practica11-ecs-fargate.sh
+
+# PASO 2 — Evidencias por criterio (tomar captura de cada una)
+bash practica11/evidencia-p11-c1-tarea.sh        # C1 (20): tarea con recursos y puerto
+bash practica11/evidencia-p11-c2-variables.sh    # C3 (15): variables inyectadas (sensibles enmascaradas)
+bash practica11/evidencia-p11-c3-balanceador.sh   # C2 (20): app responde por ALB + subred privada
+bash practica11/evidencia-p11-c4-reposicion.sh    # C5 (25): reposición automática + comparación con P08
+bash practica11/evidencia-p11-c5-cero-tareas.sh   # C6 (10): servicio en 0 tareas
+
+# PASO 3 — Al terminar (OBLIGATORIO para no acumular consumo)
+bash practica11/parar-p11.sh                      # Reducir a 0 + eliminar NAT Gateway
+```
+
+### Recursos creados
+
+| Recurso | Nombre | Descripción |
+|---------|--------|-------------|
+| Clúster ECS | `ecs-inventario-cloud-los-rojos` | Agrupa las tareas de Fargate |
+| Task Definition | `td-inventario-cloud-los-rojos` | Imagen, CPU 256, memoria 512, puerto 3000 |
+| Servicio ECS | `svc-inventario-cloud-los-rojos` | 2 tareas deseadas, Fargate, subredes privadas |
+| SG tareas | `ecs-sg-inventario-cloud-los-rojos` | Puerto 3000 solo desde el ALB |
+| Target group ip | `tg-ecs-inventario-cloud-los-rojos` | Tipo ip (no instance), health /health |
+| Rol ejecución | `rol-ecs-exec-los-rojos` | AmazonECSTaskExecutionRolePolicy (ECR + CloudWatch) |
+| Rol tarea | `rol-ecs-task-los-rojos` | Solo S3 PutObject/GetObject/DeleteObject/ListBucket |
+| NAT Gateway | `nat-inventario-cloud-los-rojos` | Permite descargar imagen ECR desde subred privada |
+| Log group | `/ecs/ecs-inventario-cloud-los-rojos` | CloudWatch Logs de las tareas |
+
+### Cómo funciona la arquitectura
+
+```
+Internet → ALB (puerto 80) → Target group ip (puerto 3000) → Tareas Fargate (subred privada)
+                                                              ↓
+                                                    RDS PostgreSQL (subred privada, puerto 5432)
+                                                    S3 bucket (vía rol de tarea)
+```
+
+- Las tareas están en subred privada, sin IP pública (`assignPublicIp: DISABLED`)
+- El SG de las tareas solo permite puerto 3000 desde el SG del ALB
+- El NAT Gateway permite descargar la imagen de ECR (se elimina al terminar)
+- El rol de la aplicación solo tiene acceso S3 al bucket del proyecto
+
+### Comandos útiles de operación
+
+```bash
+# Ver estado del servicio
+aws ecs describe-services \
+  --cluster ecs-inventario-cloud-los-rojos \
+  --services svc-inventario-cloud-los-rojos \
+  --query "services[0].{Estado:status,Deseadas:desiredCount,Corriendo:runningCount}" \
+  --output table
+
+# Ver tareas en ejecución
+aws ecs list-tasks \
+  --cluster ecs-inventario-cloud-los-rojos \
+  --service-name svc-inventario-cloud-los-rojos \
+  --desired-status RUNNING
+
+# Ver logs de las tareas
+aws logs tail /ecs/ecs-inventario-cloud-los-rojos \
+  --region us-east-1 --since 30m --format short
+
+# Probar el endpoint del balanceador
+curl http://alb-inventario-cloud-los-rojos-xxx.us-east-1.elb.amazonaws.com/health
+
+# Reducir a 0 tareas manualmente
+aws ecs update-service \
+  --cluster ecs-inventario-cloud-los-rojos \
+  --service svc-inventario-cloud-los-rojos \
+  --desired-count 0
+
+# Reactivar el servicio (poner 2 tareas)
+aws ecs update-service \
+  --cluster ecs-inventario-cloud-los-rojos \
+  --service svc-inventario-cloud-los-rojos \
+  --desired-count 2
+```
+
+### Errores frecuentes
+
+| Si te pasa esto… | Revisa |
+|-------------------|-------|
+| La tarea no arranca | Que el rol de ejecución pueda leer del registro ECR |
+| El balanceador la marca insana | El puerto del health check (3000) no coincide con el de la tarea |
+| La aplicación no encuentra la base | La variable DB_HOST tiene un valor incorrecto, o el SG de RDS no acepta al SG de ECS |
+| La tarea no puede descargar la imagen | Falta el NAT Gateway o la ruta en la tabla de ruteo privada |
+
+### Archivos del repositorio
+
+| Archivo | Propósito |
+|---------|-----------|
+| `practica11/aws-practica11-ecs-fargate.sh` | Despliegue completo (clúster, NAT, roles, tarea, servicio) |
+| `practica11/evidencia-p11-c1-tarea.sh` | Evidencia: definición de tarea con recursos y puerto |
+| `practica11/evidencia-p11-c2-variables.sh` | Evidencia: variables de entorno inyectadas |
+| `practica11/evidencia-p11-c3-balanceador.sh` | Evidencia: app responde por ALB + subred privada |
+| `practica11/evidencia-p11-c4-reposicion.sh` | Evidencia: reposición automática con tiempo |
+| `practica11/evidencia-p11-c5-cero-tareas.sh` | Evidencia: servicio en 0 tareas |
+| `practica11/parar-p11.sh` | Parar todo: 0 tareas + eliminar NAT |
+| `generar_P11.py` | Generador del documento Word |
+| `P11_LosRojos_04nov2026.docx` | Documento de entrega |

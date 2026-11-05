@@ -16,23 +16,24 @@ import os
 OUTPUT  = "P10_LosRojos_29oct2026.docx"
 IMG_DIR = r"C:\Users\angek\OneDrive\Imágenes\Practica-10"
 
-# ─── Rutas de capturas ────────────────────────────────────────────────────────
-# Reemplaza los nombres de archivo con los que captures durante la práctica.
+# ─── Rutas de capturas reales ─────────────────────────────────────────────────
 I = {
     # Criterio 1 & 2 — Construcción con tamaño visible
-    "c1_build"       : os.path.join(IMG_DIR, "c1_build.png"),
-    "c1_size"        : os.path.join(IMG_DIR, "c1_size.png"),
-    # Criterio 3 — .dockerignore y verificación
-    "c3_dockerignore": os.path.join(IMG_DIR, "c3_dockerignore.png"),
-    "c3_verify"      : os.path.join(IMG_DIR, "c3_verify.png"),
+    "c1_build"       : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 182312.png"),
+    "c1_size"        : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 191055.png"),
+    # Criterio 3 — .dockerignore y verificación (reutiliza build como evidencia)
+    "c3_dockerignore": os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 182312.png"),
+    "c3_verify"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 191138.png"),
     # Criterio 4 — Aplicación respondiendo desde el contenedor
-    "c4_run"         : os.path.join(IMG_DIR, "c4_run.png"),
-    "c4_health"      : os.path.join(IMG_DIR, "c4_health.png"),
+    "c4_run"         : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 191112.png"),
+    "c4_health"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 182232.png"),
+    # Criterio 4 — App en navegador
+    "c4_browser"     : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 182206.png"),
     # Criterio 5 — Imagen publicada en ECR
-    "c5_ecr_repo"    : os.path.join(IMG_DIR, "c5_ecr_repo.png"),
-    "c5_ecr_image"   : os.path.join(IMG_DIR, "c5_ecr_image.png"),
+    "c5_ecr_repo"    : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 191025.png"),
+    "c5_ecr_image"   : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 191126.png"),
     # Criterio 6 — Variables de entorno
-    "c6_env"         : os.path.join(IMG_DIR, "c6_env.png"),
+    "c6_env"         : os.path.join(IMG_DIR, "Captura de pantalla 2026-10-29 191138.png"),
 }
 
 # ─── Helpers (mismo patrón que P09) ──────────────────────────────────────────
@@ -170,15 +171,17 @@ for r in sub.runs:
     r.font.color.rgb = RGBColor(60, 60, 60)
 
 doc.add_paragraph()
-meta = doc.add_table(rows=5, cols=2)
+meta = doc.add_table(rows=7, cols=2)
 meta.style = "Table Grid"
 for i, (k, v) in enumerate([
-    ("Equipo",     "Los Rojos"),
-    ("Materia",    "Cómputo en la Nube · Grupo 503"),
-    ("Unidad",     "Unidad II · Segundo parcial"),
-    ("Sesión",     "Jueves 29 de octubre de 2026"),
-    ("Objetivo",   "Construir la imagen de contenedor de la aplicación del proyecto "
-                   "y publicarla en un registro privado."),
+    ("Equipo",        "Los Rojos"),
+    ("Materia",       "Cómputo en la Nube · Grupo 503"),
+    ("Unidad",        "Unidad II · Segundo parcial"),
+    ("Sesión",        "Jueves 29 de octubre de 2026"),
+    ("Integrantes",   "• Flores Guevara Ángel Gabriel\n• Kevin Ricardo López Payán"),
+    ("Docente",       "Elizabeth Gaxiola Carrillo"),
+    ("Objetivo",      "Construir la imagen de contenedor de la aplicación del proyecto "
+                      "y publicarla en un registro privado."),
 ]):
     meta.cell(i, 0).text = k
     meta.cell(i, 1).text = v
@@ -292,7 +295,7 @@ body(doc,
     "lo que cambia menos frecuentemente va primero. Esto maximiza el uso "
     "de la caché de Docker y acelera las construcciones incrementales.")
 
-tbl2 = doc.add_table(rows=7, cols=3)
+tbl2 = doc.add_table(rows=8, cols=3)
 tbl2.style = "Table Grid"
 header_row(tbl2, "Capa", "Instrucción", "¿Por qué en ese orden?")
 for i, (capa, instr, razon) in enumerate([
@@ -418,9 +421,11 @@ body(doc,
 doc.add_paragraph()
 body(doc, "Evidencia C4 — Contenedor corriendo y endpoint respondiendo:")
 add_image(doc, I["c4_run"], Inches(6.2),
-    "C4 (1/2): docker ps — contenedor inventario-p10 en estado Up, puerto 0.0.0.0:3000->3000/tcp")
+    "C4 (1/3): docker images + docker ps — imagen 57.2 MB, contenedor Up 49 minutos, puerto 0.0.0.0:3000->3000/tcp")
 add_image(doc, I["c4_health"], Inches(6.2),
-    "C4 (2/2): curl http://localhost:3000/health — respuesta HTTP 200 desde el contenedor")
+    "C4 (2/3): localhost:3000/health — respuesta JSON desde el contenedor (db degradado por RDS apagado)")
+add_image(doc, I["c4_browser"], Inches(6.2),
+    "C4 (3/3): Navegador localhost:3000 — frontend Inventario Nube sirviendo correctamente desde el contenedor")
 doc.add_paragraph()
 
 nota_recuadro(doc,
@@ -501,7 +506,7 @@ body(doc,
 
 sub_title(doc, "6.1 Lista completa de variables de entorno requeridas")
 
-tbl4 = doc.add_table(rows=14, cols=3)
+tbl4 = doc.add_table(rows=15, cols=3)
 tbl4.style = "Table Grid"
 header_row(tbl4, "Variable", "Descripción", "Ejemplo / Nota")
 for i, (var, desc, ej) in enumerate([
@@ -620,7 +625,7 @@ doc.add_paragraph()
 # ─── 9. LISTA DE COTEJO ───────────────────────────────────────────────────────
 section_title(doc, "9. Lista de cotejo")
 
-tbl7 = doc.add_table(rows=6, cols=3)
+tbl7 = doc.add_table(rows=7, cols=3)
 tbl7.style = "Table Grid"
 header_row(tbl7, "Criterio", "Puntos", "Cumple")
 for i, (c, p, ok) in enumerate([
