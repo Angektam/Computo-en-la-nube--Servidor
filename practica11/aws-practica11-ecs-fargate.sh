@@ -239,10 +239,10 @@ if [ -z "$CLUSTER_ARN" ] || [ "$CLUSTER_ARN" = "None" ]; then
   aws ecs create-cluster \
     --cluster-name "$CLUSTER_NAME" \
     --tags \
-      Key=Name,Value="$CLUSTER_NAME" \
-      Key=proyecto,Value="$PROYECTO" \
-      Key=equipo,Value="$EQUIPO" \
-      Key=ambiente,Value="$AMBIENTE" \
+      key=Name,value="$CLUSTER_NAME" \
+      key=proyecto,value="$PROYECTO" \
+      key=equipo,value="$EQUIPO" \
+      key=ambiente,value="$AMBIENTE" \
     > /dev/null
   echo "✔ Clúster creado: $CLUSTER_NAME"
 else
@@ -537,9 +537,9 @@ cat > "$TMP_TD" << TDJSON
   "cpu": "$TASK_CPU",
   "memory": "$TASK_MEMORY",
   "tags": [
-    {"Key":"proyecto","Value":"$PROYECTO"},
-    {"Key":"equipo","Value":"$EQUIPO"},
-    {"Key":"ambiente","Value":"$AMBIENTE"}
+    {"key":"proyecto","value":"$PROYECTO"},
+    {"key":"equipo","value":"$EQUIPO"},
+    {"key":"ambiente","value":"$AMBIENTE"}
   ],
   "containerDefinitions": [
     {
@@ -744,10 +744,10 @@ if [ -z "$SERVICE_EXISTS" ] || [ "$SERVICE_EXISTS" = "None" ] || [ "$SERVICE_EXI
     --scheduling-strategy REPLICA \
     --deployment-configuration "maximumPercent=200,minimumHealthyPercent=100" \
     --tags \
-      Key=Name,Value="$SERVICE_NAME" \
-      Key=proyecto,Value="$PROYECTO" \
-      Key=equipo,Value="$EQUIPO" \
-      Key=ambiente,Value="$AMBIENTE" \
+      key=Name,value="$SERVICE_NAME" \
+      key=proyecto,value="$PROYECTO" \
+      key=equipo,value="$EQUIPO" \
+      key=ambiente,value="$AMBIENTE" \
     > /dev/null
   echo "✔ Servicio creado: $SERVICE_NAME"
   echo "  · Clúster        : $CLUSTER_NAME"
