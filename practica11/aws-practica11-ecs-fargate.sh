@@ -562,6 +562,7 @@ cat > "$TMP_TD" << TDJSON
         {"name":"DB_NAME","value":"$ENV_DB_NAME"},
         {"name":"DB_USER","value":"$ENV_DB_USER"},
         {"name":"DB_SSL","value":"$ENV_DB_SSL"},
+        {"name":"DB_SSL_REJECT_UNAUTHORIZED","value":"false"},
         {"name":"S3_BUCKET","value":"$ENV_S3_BUCKET"},
         {"name":"JWT_EXPIRES_IN","value":"$ENV_JWT_EXPIRES"},
         {"name":"DB_PASSWORD","value":"$ENV_DB_PASSWORD"},
