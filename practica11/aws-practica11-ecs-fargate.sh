@@ -59,7 +59,7 @@ TASK_ROLE_NAME="rol-ecs-task-$EQUIPO"
 SG_ECS_NAME="ecs-sg-$PROYECTO-$EQUIPO"
 
 # Target Group para ECS (tipo ip, distinto al de EC2 que es instance)
-TG_ECS_NAME="tg-ecs-$PROYECTO-$EQUIPO"
+TG_ECS_NAME="tg-ecs-$EQUIPO"
 
 # NAT Gateway
 NAT_NAME="nat-$PROYECTO-$EQUIPO"
