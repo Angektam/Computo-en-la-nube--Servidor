@@ -26,10 +26,14 @@ echo ""
 aws ecs describe-task-definition \
   --task-definition "$TASK_FAMILY" \
   --query "taskDefinition.containerDefinitions[0].environment" \
-  --output json | python3 -c '
-import json, sys
+  --output json > /tmp/env-vars.json
 
-data = json.load(sys.stdin)
+python3 << 'PYEOF'
+import json
+
+with open('/tmp/env-vars.json') as f:
+    data = json.load(f)
+
 sensitive = {"DB_PASSWORD", "JWT_SECRET"}
 
 print(f"  {'VARIABLE':<25} {'VALOR':<55} {'TIPO'}")
@@ -53,7 +57,7 @@ for env in data:
         display = value
         tipo = "config"
     print(f"  {name:<25} {display:<55} {tipo}")
-'
+PYEOF
 
 echo ""
 echo "┌─────────────────────────────────────────────────────────────────┐"
