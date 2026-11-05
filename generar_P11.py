@@ -4,15 +4,6 @@
 generar_P11.py — Genera P11_LosRojos_04nov2026.docx con capturas reales
 Práctica 11: Ejecutar el contenedor del proyecto sin administrar servidores
 Equipo Los Rojos | Cómputo en la Nube | 4 nov 2026
-
-Uso:
-  1. Tomar las capturas durante la sesión y guardarlas en:
-     C:\\Users\\angek\\OneDrive\\Imágenes\\Practica-11\\
-  2. Ejecutar: python generar_P11.py
-  3. El documento se genera como P11_LosRojos_04nov2026.docx
-
-Si las capturas aún no existen, el documento se genera con marcadores
-en rojo donde irá cada imagen.
 """
 
 from docx import Document
@@ -23,27 +14,73 @@ from docx.oxml import OxmlElement
 import os
 
 OUTPUT  = "P11_LosRojos_04nov2026.docx"
-IMG_DIR = r"C:\Users\angek\OneDrive\Imágenes\Practica-11"
+IMG_DIR = r"C:\Users\angek\OneDrive\Imágenes\practica-11"
 
-# Diccionario de capturas (ajustar nombres según tus capturas reales)
-# Los nombres deben coincidir con los archivos en IMG_DIR
+# Mapeo de capturas (orden cronológico según timestamp)
 I = {
-    "deploy"      : os.path.join(IMG_DIR, "p11-deploy.png"),
-    "c1_tarea"    : os.path.join(IMG_DIR, "p11-c1-tarea.png"),
-    "c1_rol"      : os.path.join(IMG_DIR, "p11-c1-rol.png"),
-    "c2_vars"     : os.path.join(IMG_DIR, "p11-c2-variables.png"),
-    "c3_health"   : os.path.join(IMG_DIR, "p11-c3-health.png"),
-    "c3_browser"  : os.path.join(IMG_DIR, "p11-c3-browser.png"),
-    "c3_privada"  : os.path.join(IMG_DIR, "p11-c3-privada.png"),
-    "c4_stop"     : os.path.join(IMG_DIR, "p11-c4-stop.png"),
-    "c4_repo"     : os.path.join(IMG_DIR, "p11-c4-reposicion.png"),
-    "c5_cero"     : os.path.join(IMG_DIR, "p11-c5-cero.png"),
+    # Despliegue principal (pasos 0-3: VPC, clúster, NAT, SG)
+    "deploy_1"   : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 221336.png"),
+    # Despliegue (pasos 3-4: SG ECS creado, RDS autorizado)
+    "deploy_2"   : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 221350.png"),
+    # Despliegue (pasos 5-8: roles, variables, task definition, TG)
+    "deploy_3"   : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 221402.png"),
+    # Despliegue (paso 8: variables cargadas + task definition)
+    "deploy_4"   : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 221414.png"),
+    # Despliegue (pasos 9-13: TG, ALB, servicio creado, tareas arrancando)
+    "deploy_5"   : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 221425.png"),
+    # Resumen final del despliegue (clúster, tarea, servicio, balanceador)
+    "deploy_6"   : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 221438.png"),
+    # Fix SSL: registrar nueva revisión con DB_SSL_REJECT_UNAUTHORIZED
+    "fix_ssl"    : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 221659.png"),
+    # psql SELECT 1 → conexión RDS confirmada
+    "rds_ok"     : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 222928.png"),
+
+    # Evidencia C1 (tarea): definición, rol ejecución, rol tarea (parte 1)
+    "c1_p1"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 224912.png"),
+    # Evidencia C1: rol tarea política inline + servicio + tareas RUNNING
+    "c1_p2"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 224922.png"),
+    # Evidencia C1: tareas RUNNING con IP privada + resumen recursos
+    "c1_p3"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 224932.png"),
+    # Evidencia C1: resumen CPU/memoria/puerto
+    "c1_p4"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 224951.png"),
+
+    # Evidencia C2 (variables): tabla completa con sensibles enmascarados
+    "c2_p1"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225054.png"),
+    # Evidencia C2: verificación Dockerfile + tipos de variables
+    "c2_p2"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225101.png"),
+    # Evidencia C2: tipos de variables y su origen (parte 2)
+    "c2_p3"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225156.png"),
+    # Evidencia C2: total 13 variables
+    "c2_p4"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225205.png"),
+
+    # Evidencia C3 (balanceador): HTTP 200 + {"status":"ok","db":"ok"}
+    "c3_health"  : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225217.png"),
+    # Evidencia C3: URL + health check 200 + error TG (nombre largo)
+    "c3_alb"     : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225246.png"),
+    # Evidencia C3: health check target group y SG privado
+    "c3_sg"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225253.png"),
+    # Evidencia C3: curl final HTTP 200 {"status":"ok"}
+    "c3_ok"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225313.png"),
+
+    # Evidencia C4 (reposición): estado inicial + detener tarea + cronómetro
+    "c4_p1"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225412.png"),
+    # Evidencia C4: tiempo 12 s + estado después + tabla comparativa ECS vs EC2
+    "c4_p2"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225429.png"),
+    # Evidencia C4: tabla comparativa completa + conclusión
+    "c4_p3"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225439.png"),
+
+    # Evidencia C5 (cero tareas): antes/reducir/después
+    "c5_p1"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225533.png"),
+    # Evidencia C5: confirmación 0 tareas + costo recordatorio
+    "c5_p2"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225540.png"),
+
+    # parar-p11.sh: eliminar NAT Gateway + resumen
+    "parar"      : os.path.join(IMG_DIR, "Captura de pantalla 2026-11-04 225747.png"),
 }
 
-# ─── Helpers (mismos que en generar_P09.py) ──────────────────────────────────
+# ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def add_image(doc, path, width=Inches(6.0), caption_text=None):
-    """Inserta imagen centrada con pie de figura opcional."""
     if not os.path.exists(path):
         p = doc.add_paragraph(f"[Imagen no encontrada: {os.path.basename(path)}]")
         p.runs[0].font.color.rgb = RGBColor(200, 0, 0)
@@ -59,7 +96,7 @@ def add_image(doc, path, width=Inches(6.0), caption_text=None):
         r.font.italic = True
         r.font.size   = Pt(9)
         r.font.color.rgb = RGBColor(80, 80, 80)
-        cap.paragraph_format.space_after = Pt(8)
+        cap.paragraph_format.space_after = Pt(6)
 
 
 def shading_cell(cell, color_hex):
@@ -165,8 +202,7 @@ for r in titulo.runs:
     r.font.size = Pt(20); r.font.bold = True
     r.font.color.rgb = RGBColor(31, 56, 100)
 
-sub = doc.add_heading("Ejecutar el contenedor del proyecto sin administrar servidores",
-                       level=2)
+sub = doc.add_heading("Ejecutar el contenedor del proyecto sin administrar servidores", level=2)
 sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
 for r in sub.runs:
     r.font.size = Pt(14); r.font.bold = False
@@ -180,395 +216,358 @@ for i, (k, v) in enumerate([
     ("Materia",  "Cómputo en la Nube"),
     ("Unidad",   "Unidad II · Segundo parcial"),
     ("Sesión",   "Miércoles 4 de noviembre de 2026"),
-    ("Objetivo", "Desplegar la imagen del proyecto en un servicio administrado de "
-                 "contenedores y exponerla mediante el balanceador."),
+    ("Objetivo", "Desplegar la imagen del proyecto en ECS Fargate y exponerla "
+                 "mediante el balanceador de carga."),
 ]):
     meta.cell(i, 0).text = k
     meta.cell(i, 1).text = v
     for p in meta.cell(i, 0).paragraphs:
-        for r in p.runs: r.font.bold = True; r.font.color.rgb = RGBColor(255,255,255); r.font.size = Pt(10)
+        for r in p.runs:
+            r.font.bold = True
+            r.font.color.rgb = RGBColor(255, 255, 255)
+            r.font.size = Pt(10)
     shading_cell(meta.cell(i, 0), "1F3864")
     for p in meta.cell(i, 1).paragraphs:
-        for r in p.runs: r.font.size = Pt(10)
+        for r in p.runs:
+            r.font.size = Pt(10)
 
 doc.add_paragraph()
 doc.add_page_break()
 
 # ─── INTRODUCCIÓN ────────────────────────────────────────────────────────────
 section_title(doc, "Introducción")
-
 body(doc,
     "Tener una imagen no basta: alguien tiene que ejecutarla, vigilar que siga "
-    "viva y reponerla si muere. Eso es orquestación. Un servicio administrado sin "
-    "servidores hace ese trabajo y factura por los recursos que la tarea consume, "
-    "sin que el equipo dimensione ni parchee máquina alguna. Esta práctica cierra "
-    "el ciclo que empezó en la práctica 3: del servidor que se administraba a mano "
-    "al contenedor que se administra solo.")
+    "viva y reponerla si muere. Un servicio administrado sin servidores hace ese "
+    "trabajo y factura por los recursos que la tarea consume, sin que el equipo "
+    "dimensione ni parchee máquina alguna. Esta práctica cierra el ciclo iniciado "
+    "en la práctica 3: del servidor administrado a mano al contenedor que se "
+    "administra solo.")
+doc.add_paragraph()
 
-body(doc, "Prerequisitos:")
-for pre in [
-    "Práctica 10 terminada, con la imagen publicada en ECR",
-    "Práctica 8 terminada, con el balanceador disponible",
-    "Las variables de entorno de la aplicación identificadas",
-]:
-    bul = doc.add_paragraph(style="List Bullet")
-    bul.add_run(pre).font.size = Pt(10)
+# ─── 1. DESPLIEGUE COMPLETO ───────────────────────────────────────────────────
+section_title(doc, "1. Despliegue completo del servicio ECS Fargate")
+
+body(doc,
+    "El script aws-practica11-ecs-fargate.sh ejecutó 13 pasos automáticos: "
+    "recuperar recursos existentes, crear el clúster, NAT Gateway, security groups, "
+    "roles IAM, task definition, target group, conectar el ALB y lanzar el servicio "
+    "en subredes privadas.")
+
+add_image(doc, I["deploy_1"], Inches(6.2),
+    "Pasos 0-3: recuperación de recursos (VPC, subredes, ALB, RDS, ECR) + "
+    "clúster creado + NAT Gateway + SG ECS")
+add_image(doc, I["deploy_2"], Inches(6.2),
+    "Pasos 3-4: SG ECS creado (puerto 3000 solo desde ALB) + "
+    "RDS autorizado para recibir de las tareas ECS")
+add_image(doc, I["deploy_3"], Inches(6.2),
+    "Pasos 5-8: roles IAM creados + variables de entorno cargadas + "
+    "task definition registrada (imagen ECR, CPU 256, memoria 512, puerto 3000)")
+add_image(doc, I["deploy_4"], Inches(6.2),
+    "Paso 8 ampliado: variables sensibles enmascaradas, DB_HOST inyectado, "
+    "target group tipo ip y ALB conectado al servicio ECS")
+add_image(doc, I["deploy_5"], Inches(6.2),
+    "Pasos 9-13: target group creado, listener modificado, ASG reducido a 0, "
+    "servicio Fargate creado en subredes privadas, tareas arrancando (2/2)")
+add_image(doc, I["deploy_6"], Inches(6.2),
+    "Resumen final del despliegue: clúster, task definition rev 2, "
+    "servicio FARGATE con 2 tareas deseadas en subredes privadas, DNS del ALB")
 
 doc.add_paragraph()
 
-# ─── 1. CREAR EL AGRUPAMIENTO ────────────────────────────────────────────────
-section_title(doc, "1. Crear el agrupamiento (clúster ECS)")
-
+# Nota sobre el fix SSL
+sub_title(doc, "1.1 Ajuste de configuración: certificado SSL de RDS")
 body(doc,
-    "Se creó el clúster de contenedores en la red del proyecto (VPC de la práctica 5), "
-    "con las etiquetas del esquema. El clúster agrupa las tareas de Fargate y no tiene "
-    "costo por sí mismo: se cobra por las tareas en ejecución.")
-
-code_block(doc,
-"""# Crear el clúster
-aws ecs create-cluster \\
-  --cluster-name ecs-inventario-cloud-los-rojos \\
-  --tags Key=proyecto,Value=inventario-cloud \\
-         Key=equipo,Value=los-rojos""")
-
-body(doc, "Evidencia del despliegue completo en CloudShell:")
-add_image(doc, I["deploy"], Inches(6.2),
-    "Despliegue completo: clúster, NAT Gateway, roles, task definition, servicio y verificación")
+    "Durante el despliegue se detectó que RDS usa un certificado SSL auto-firmado "
+    "en cadena. Se agregó la variable DB_SSL_REJECT_UNAUTHORIZED=false a la "
+    "task definition (revisión 3) y se actualizó el servicio. Adicionalmente, "
+    "se incrementó la memoria a 1024 MB (revisión 7) al detectar que Node.js "
+    "necesitaba más que los 512 MB iniciales para arrancar correctamente.")
+add_image(doc, I["fix_ssl"], Inches(6.0),
+    "Registro de nueva revisión de task definition con DB_SSL_REJECT_UNAUTHORIZED=false")
+add_image(doc, I["rds_ok"], Inches(5.5),
+    "Verificación de conexión a RDS: psql SELECT 1 responde correctamente")
 doc.add_paragraph()
 
-# ─── 2. DEFINIR LA TAREA ─────────────────────────────────────────────────────
-section_title(doc, "2. Definir la tarea con recursos y puerto (C1 — 20 pts)")
+# ─── 2. DEFINICIÓN DE LA TAREA ────────────────────────────────────────────────
+section_title(doc, "2. Definición de la tarea con recursos y puerto (C1 — 20 pts)")
 
 body(doc,
-    "La definición de tarea indica la imagen del registro ECR, la memoria y el "
-    "procesador asignados, y el puerto que expone. Estos valores se anotan para "
-    "evaluar en la práctica 17 si sobraban.")
+    "La definición de tarea especifica la imagen del registro ECR, los recursos "
+    "de cómputo asignados y el puerto expuesto. Estos valores se anotan para "
+    "evaluar en la práctica 17 si sobraban o eran insuficientes.")
 
 tbl = doc.add_table(rows=6, cols=3)
 tbl.style = "Table Grid"
-header_row(tbl, "Parámetro", "Valor asignado", "Justificación")
+header_row(tbl, "Parámetro", "Valor", "Justificación")
 for i, (p, v, j) in enumerate([
-    ("Imagen",          "ECR: inventario-nube-losrojos:1.0.0", "Publicada en la práctica 10"),
-    ("CPU",             "256 (0.25 vCPU)",                      "Mínimo Fargate; anotar para P17"),
-    ("Memoria",         "512 MB",                                "Mínimo Fargate; anotar para P17"),
-    ("Puerto",          "3000",                                   "EXPOSE del Dockerfile (P10)"),
-    ("Red",             "awsvpc (Fargate)",                      "Cada tarea tiene su ENI privada"),
+    ("Imagen",   "935710521154.dkr.ecr.us-east-1.amazonaws.com/inventario-nube-losrojos:1.0.0",
+                 "Publicada en ECR (práctica 10)"),
+    ("CPU",      "256 (0.25 vCPU)",   "Mínimo Fargate — anotar para P17"),
+    ("Memoria",  "1024 MB",            "Ajustado de 512 a 1024 MB (Node necesitaba más)"),
+    ("Puerto",   "3000",               "EXPOSE del Dockerfile (práctica 10)"),
+    ("Red",      "awsvpc (Fargate)",   "Cada tarea recibe su propia ENI privada"),
 ], 1):
-    data_row(tbl, i, p, v, j, bg="FFF3CD" if "anotar" in j else None)
+    bg = "FFF3CD" if "P17" in j else None
+    data_row(tbl, i, p, v, j, bg=bg or ("F7F7F7" if i % 2 == 0 else "FFFFFF"))
 
 doc.add_paragraph()
-body(doc, "Evidencia de la definición de tarea y las tareas en ejecución:")
-add_image(doc, I["c1_tarea"], Inches(6.2),
-    "C1: Definición de tarea (imagen, CPU, memoria, puerto) + tareas RUNNING con IP privada")
+add_image(doc, I["c1_p1"], Inches(6.2),
+    "C1 (1/4): DescribeTaskDefinition — imagen ECR, CPU 256, memoria 1024, "
+    "puerto 3000, red awsvpc, revisión 7 + rol de ejecución AmazonECSTaskExecutionRolePolicy")
+add_image(doc, I["c1_p2"], Inches(6.2),
+    "C1 (2/4): Rol de tarea con política inline pol-s3-minimo-los-rojos "
+    "(solo PutObject/GetObject/DeleteObject/ListBucket sobre el bucket del proyecto) + "
+    "servicio ACTIVE con 2 tareas corriendo")
+add_image(doc, I["c1_p3"], Inches(6.2),
+    "C1 (3/4): Dos tareas RUNNING con IP privada (10.0.2.239 y 10.0.2.16), "
+    "imagen ECR confirmada en ambas tareas")
+add_image(doc, I["c1_p4"], Inches(5.5),
+    "C1 (4/4): Resumen de recursos asignados — CPU 256 (0.25 vCPU), "
+    "memoria 512 MB, puerto 3000, NAT Gateway activo para descarga de ECR")
 doc.add_paragraph()
 
-# ─── 3. INYECTAR LA CONFIGURACIÓN ─────────────────────────────────────────────
-section_title(doc, "3. Inyectar la configuración por variables de entorno (C3 — 15 pts)")
+# ─── 3. VARIABLES DE ENTORNO ──────────────────────────────────────────────────
+section_title(doc, "3. Configuración inyectada por variables de entorno (C3 — 15 pts)")
 
 body(doc,
-    "Las variables de entorno se configuran en la definición de la tarea, no dentro "
-    "de la imagen. La dirección de la base de datos va aquí, nunca dentro de la imagen. "
-    "La misma imagen sirve para dev, staging y producción: solo cambian las variables.")
-
-body(doc, "Variables inyectadas (13 en total, 2 secretas enmascaradas):")
+    "Las 13 variables de entorno se configuran en la definición de tarea, no "
+    "dentro de la imagen. La dirección de la base de datos va aquí, nunca en la "
+    "imagen. Los valores sensibles (DB_PASSWORD y JWT_SECRET) no son visibles en "
+    "ninguna captura.")
 
 tbl2 = doc.add_table(rows=14, cols=3)
 tbl2.style = "Table Grid"
-header_row(tbl2, "Variable", "Valor (sensibles enmascarados)", "Origen")
-vars_info = [
-    ("PORT",            "3000",                                    "Dockerfile (valor seguro)"),
-    ("NODE_ENV",        "production",                              "Tarea"),
-    ("CORS_ORIGIN",     "http://alb-xxx.elb.amazonaws.com",         "DNS del balanceador"),
-    ("AWS_REGION",      "us-east-1",                                "Región del proyecto"),
-    ("DB_HOST",         "inventario-db.xxx.rds.amazonaws.com",     "Endpoint RDS (P06)"),
-    ("DB_PORT",         "5432",                                     "PostgreSQL estándar"),
-    ("DB_NAME",         "postgres",                                 "Base de datos"),
-    ("DB_USER",         "postgres",                                 "Usuario RDS"),
-    ("DB_PASSWORD",     "******** (no visible)",                    "SECRETO — inyectado"),
-    ("DB_SSL",          "true",                                     "Cifrado en tránsito"),
-    ("S3_BUCKET",       "inventario-archivos-losrojos",            "Bucket del proyecto (P04)"),
-    ("JWT_SECRET",      "******** (no visible)",                    "SECRETO — inyectado"),
-    ("JWT_EXPIRES_IN",  "8h",                                       "Duración del token"),
+header_row(tbl2, "Variable", "Valor (sensibles enmascarados)", "Tipo")
+vars_list = [
+    ("S3_BUCKET",                 "inventario-archivos-losrojos",                    "nombre bucket"),
+    ("AWS_REGION",                "us-east-1",                                        "config"),
+    ("PORT",                      "3000",                                              "config"),
+    ("DB_PORT",                   "5432",                                              "config"),
+    ("DB_USER",                   "postgres",                                          "no sensible"),
+    ("DB_NAME",                   "postgres",                                          "no sensible"),
+    ("JWT_EXPIRES_IN",            "8h",                                                "config"),
+    ("DB_HOST",                   "rds-inventario-cloud-los-rojos.xxx.rds.amazonaws.com","endpoint RDS"),
+    ("DB_SSL_REJECT_UNAUTHORIZED","false",                                             "config"),
+    ("CORS_ORIGIN",               "http://alb-inventario-cloud-los-rojos-xxx.elb.amazonaws.com","config"),
+    ("DB_SSL",                    "true",                                              "config"),
+    ("JWT_SECRET",                "******** (no visible)",                             "SECRETO"),
+    ("DB_PASSWORD",               "******** (no visible)",                             "SECRETO"),
 ]
-for i, (n, v, o) in enumerate(vars_info, 1):
-    bg = "FFF3CD" if "SECRETO" in o or "no visible" in v else None
-    data_row(tbl2, i, n, v, o, bg=bg or ("F7F7F7" if i % 2 == 0 else "FFFFFF"))
+for i, (n, v, t) in enumerate(vars_list, 1):
+    bg = "FFF3CD" if t == "SECRETO" else ("D4EDDA" if t == "endpoint RDS" else None)
+    data_row(tbl2, i, n, v, t, bg=bg or ("F7F7F7" if i % 2 == 0 else "FFFFFF"))
 
 doc.add_paragraph()
-body(doc, "Evidencia de las variables inyectadas (valores sensibles enmascarados):")
-add_image(doc, I["c2_vars"], Inches(6.2),
-    "C3: Lista de 13 variables de entorno inyectadas, 2 secretas enmascaradas con ******")
+add_image(doc, I["c2_p1"], Inches(6.2),
+    "C3 (1/4): Tabla completa de 13 variables inyectadas — "
+    "DB_PASSWORD y JWT_SECRET enmascarados con ********")
+add_image(doc, I["c2_p2"], Inches(5.5),
+    "C3 (2/4): Verificación — el Dockerfile NO contiene DB_HOST, DB_PASSWORD "
+    "ni JWT_SECRET (verificado en práctica 10, criterio C5)")
+add_image(doc, I["c2_p3"], Inches(6.2),
+    "C3 (3/4): Tipos de variables y su origen — DB_HOST va en la tarea, "
+    "no en la imagen; la misma imagen sirve para dev, staging y producción")
+add_image(doc, I["c2_p4"], Inches(6.2),
+    "C3 (4/4): Total 13 variables de entorno inyectadas, 2 secretas enmascaradas")
 doc.add_paragraph()
 
-# ─── 4. ASIGNAR EL ROL DE LA TAREA ───────────────────────────────────────────
-section_title(doc, "4. Asignar el rol de la tarea con permisos acotados (C4 — 10 pts)")
+# ─── 4. ROL DE LA TAREA ────────────────────────────────────────────────────────
+section_title(doc, "4. Rol de la tarea con permisos acotados (C4 — 10 pts)")
 
 body(doc,
-    "Se adjuntó un rol con los permisos mínimos que la aplicación necesita. "
-    "Una tarea con permisos amplios es un riesgo que aparecería en la matriz del "
-    "proyecto. El rol de la aplicación solo permite operaciones S3 sobre el bucket "
-    "del proyecto — ningún otro bucket ni servicio.")
+    "Se adjuntaron dos roles distintos a la tarea:")
 
-sub_title(doc, "4.1 Rol de ejecución (para descargar la imagen y enviar logs)")
-body(doc, "Usa la política administrada de AWS AmazonECSTaskExecutionRolePolicy, "
-          "que incluye únicamente:")
-for p in [
-    "ecr:BatchCheckLayerAvailability, ecr:GetDownloadUrlForLayer, "
-    "ecr:BatchGetImage, ecr:GetAuthorizationToken — leer del registro ECR",
-    "logs:CreateLogStream, logs:PutLogEvents, logs:CreateLogGroup — enviar logs a CloudWatch",
-]:
-    bul = doc.add_paragraph(style="List Bullet")
-    bul.add_run(p).font.size = Pt(10)
+sub_title(doc, "4.1 Rol de ejecución (para el agente ECS)")
+body(doc,
+    "rol-ecs-exec-los-rojos usa la política administrada "
+    "AmazonECSTaskExecutionRolePolicy, que permite únicamente leer imágenes de ECR "
+    "y enviar logs a CloudWatch. Sin este rol, las tareas no pueden descargar la "
+    "imagen del registro.")
 
-sub_title(doc, "4.2 Rol de la tarea (permisos de la aplicación — acotados)")
+sub_title(doc, "4.2 Rol de la tarea (para la aplicación)")
+body(doc,
+    "rol-ecs-task-los-rojos tiene una política inline pol-s3-minimo-los-rojos "
+    "con permisos mínimos: solo s3:PutObject, s3:GetObject, s3:DeleteObject y "
+    "s3:ListBucket sobre el bucket inventario-archivos-losrojos. "
+    "No puede escribir ni leer en ningún otro bucket ni servicio.")
+
 code_block(doc,
 """{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-      "Resource": "arn:aws:s3:::inventario-archivos-losrojos/*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": ["s3:ListBucket"],
-      "Resource": "arn:aws:s3:::inventario-archivos-losrojos"
-    }
-  ]
+  "Effect": "Allow",
+  "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+  "Resource": "arn:aws:s3:::inventario-archivos-losrojos/*"
+},
+{
+  "Effect": "Allow",
+  "Action": ["s3:ListBucket"],
+  "Resource": "arn:aws:s3:::inventario-archivos-losrojos"
 }""")
 
-body(doc,
-    "El rol NO tiene acceso a DynamoDB, RDS, EC2 ni a otros buckets. Si la tarea "
-    "fuera comprometida, el atacante solo podría leer y escribir archivos en un bucket.")
-
-body(doc, "Evidencia del rol con permisos acotados:")
-add_image(doc, I["c1_rol"], Inches(6.2),
-    "C4: Rol de tarea con política inline — solo S3 PutObject/GetObject/DeleteObject/ListBucket")
-doc.add_paragraph()
-
-# ─── 5. COLOCAR EN SUBRED PRIVADA ─────────────────────────────────────────────
-section_title(doc, "5. Colocar en subred privada, sin dirección pública (C2 — 20 pts)")
-
-body(doc,
-    "El servicio se desplegó en las subredes privadas de la VPC, sin dirección pública "
-    "(assignPublicIp: DISABLED). El acceso desde internet es exclusivamente por el "
-    "balanceador. Las tareas reciben una IP privada dentro de la VPC y no son "
-    "alcanzables desde internet.")
-
-sub_title(doc, "5.1 Configuración de red del servicio")
-code_block(doc,
-"""networkConfiguration:
-  awsvpcConfiguration:
-    subnets:           [subnet-priv-1, subnet-priv-2]   # subredes PRIVADAS
-    securityGroups:    [sg-ecs-tasks]                   # solo recibe del ALB
-    assignPublicIp:     DISABLED                          # sin IP pública""")
-
-sub_title(doc, "5.2 Grupo de seguridad de las tareas")
-body(doc,
-    "El SG de las tareas solo permite tráfico entrante en el puerto 3000 desde el "
-    "SG del balanceador. No hay regla 0.0.0.0/0, por lo que internet no puede "
-    "conectarse directamente a las tareas.")
-
-sub_title(doc, "5.3 NAT Gateway para descargar la imagen")
-body(doc,
-    "Como las tareas están en subred privada sin IP pública, necesitan un NAT "
-    "Gateway para descargar la imagen del registro ECR. El NAT Gateway se crea en "
-    "la subred pública y se agrega una ruta en la tabla de ruteo privada. Al terminar "
-    "se elimina para no acumular costo.")
-
-body(doc, "Evidencia: tareas en subred privada sin IP pública y health checks sanos:")
-add_image(doc, I["c3_privada"], Inches(6.2),
-    "C2: Tareas con IP privada, sin IP pública (DISABLED) + health checks del target group")
-doc.add_paragraph()
-
-# ─── 6. CONECTAR AL BALANCEADOR ──────────────────────────────────────────────
-section_title(doc, "6. Conectar al balanceador y probar de extremo a extremo")
-
-body(doc,
-    "Se creó un nuevo grupo destino tipo ip (el de la práctica 8 era tipo instance "
-    "para EC2). El listener del balanceador se modificó para reenviar al nuevo "
-    "target group de ECS. Se verificó que la verificación de estado marca las "
-    "tareas como sanas.")
-
-body(doc, "Evidencia del endpoint /health respondiendo por el balanceador:")
-add_image(doc, I["c3_health"], Inches(6.2),
-    "ALB responde HTTP 200 en /health — la aplicación sirve desde contenedores")
-doc.add_paragraph()
-
-body(doc, "Evidencia desde el navegador:")
-add_image(doc, I["c3_browser"], Inches(5.5),
-    "Aplicación del proyecto respondiendo desde el contenedor vía el balanceador")
-doc.add_paragraph()
-
-# ─── 7. PROBAR LA REPOSICIÓN ─────────────────────────────────────────────────
-section_title(doc, "7. Reposición automática con tiempo cronometrado (C5 — 25 pts)")
-
-body(doc,
-    "Se detuvo una tarea a propósito y se cronometró cuánto tarda ECS en crear "
-    "una nueva. Este tiempo se compara con el medido en la práctica 8 con instancias "
-    "EC2 (ASG). La diferencia es el dato más valioso para el apartado de continuidad "
-    "y la defensa oral.")
-
-sub_title(doc, "7.1 Procedimiento")
-for paso in [
-    "Estado inicial: 2 tareas RUNNING, desiredCount = 2",
-    "Se detiene una tarea con aws ecs stop-task (a propósito)",
-    "El servicio detecta que falta una tarea (runningCount < desiredCount)",
-    "ECS programa una nueva tarea: descarga imagen de ECR, inicia contenedor",
-    "La nueva tarea pasa health checks y entra al pool del balanceador",
-    "Se cronometra el tiempo total desde la detención hasta la reposición",
-]:
-    bul = doc.add_paragraph(style="List Bullet")
-    bul.add_run(paso).font.size = Pt(10)
-
-body(doc, "Evidencia de la detención de la tarea y reposición:")
-add_image(doc, I["c4_stop"], Inches(6.2),
-    "C4 (1/2): Tarea detenida a propósito — cronómetro inicia")
-add_image(doc, I["c4_repo"], Inches(6.2),
-    "C4 (2/2): Reposición automática completada — nueva tarea RUNNING, tiempo cronometrado")
-doc.add_paragraph()
-
-sub_title(doc, "7.2 Comparación: contenedores (ECS Fargate) vs instancias (EC2 ASG)")
-
-tbl3 = doc.add_table(rows=7, cols=3)
-tbl3.style = "Table Grid"
-header_row(tbl3, "Métrica", "ECS Fargate (P11)", "EC2 ASG (P08)")
-comparacion = [
-    ("Tiempo de reposición",    "~30-60 s",                    "~120-180 s (medir P08)"),
-    ("Qué se reemplaza",        "Contenedor (tarea)",           "Instancia EC2 completa"),
-    ("Inicia sistema operativo", "No (Fargate lo gestiona)",    "Sí (boot completo de Linux)"),
-    ("Descarga imagen",         "Sí (de ECR, ~10-30 s)",       "Sí (AMI, ~30-60 s)"),
-    ("Inicia aplicación",       "Sí (Node.js ~2-5 s)",         "Sí (PM2/Nginx ~10-20 s)"),
-    ("Escala a cero",           "Sí (desiredCount = 0)",       "No (min = 2 en P08)"),
-]
-for i, (m, ecs, ec2) in enumerate(comparacion, 1):
-    data_row(tbl3, i, m, ecs, ec2,
-             bg="D4EDDA" if "30-60" in ecs else ("F7F7F7" if i % 2 == 0 else "FFFFFF"))
-
-doc.add_paragraph()
-
-sub_title(doc, "7.3 Conclusión de la comparación")
-body(doc,
-    "El contenedor se repone en segundos porque NO inicia el sistema operativo: solo "
-    "el proceso de la aplicación (Node.js). Una instancia EC2 arranca en minutos porque "
-    "debe iniciar el kernel, systemd, nginx, PM2 y luego la aplicación. Los equipos que "
-    "pueden contestar «tarda tanto en reponerse, lo medimos» se distinguen inmediatamente "
-    "de los que responden «es tolerante a fallos».")
-
 nota_recuadro(doc,
-    "📌 DATO PARA LA DEFENSA ORAL: El tiempo de reposición medido fue de ___ segundos "
-    "para contenedores (ECS Fargate) frente a ___ segundos para instancias (EC2 ASG, "
-    "práctica 8). La diferencia es de un factor de ___× a favor de los contenedores, "
-    "porque un contenedor no inicia el sistema operativo, solo el proceso de la "
-    "aplicación.",
-    bg="D4EDDA")
+    "SEGURIDAD: Una tarea con permisos amplios (ej. AdministratorAccess o S3FullAccess) "
+    "es un riesgo que aparecería en la matriz del proyecto. Si la tarea fuera comprometida, "
+    "el atacante solo podría leer y escribir archivos en un bucket específico.",
+    bg="F8D7DA")
 doc.add_paragraph()
 
-# ─── 8. REDUCIR A CERO ────────────────────────────────────────────────────────
-section_title(doc, "8. Reducir a cero al terminar (C6 — 10 pts)")
+# ─── 5. SUBRED PRIVADA Y BALANCEADOR ──────────────────────────────────────────
+section_title(doc, "5. Subred privada + balanceador (C2 — 20 pts)")
 
 body(doc,
-    "El cómputo sin servidores para contenedores cobra por segundo de recursos "
-    "asignados. Dejar dos tareas corriendo el fin de semana es uno de los gastos "
-    "que más rápido crece. La reducción a cero no es opcional.")
+    "El servicio se desplegó en las subredes privadas de la VPC con "
+    "assignPublicIp: DISABLED. El único acceso desde internet es a través del "
+    "balanceador. Las tareas tienen IP privada y no son alcanzables directamente.")
 
-body(doc,
-    "Se ajustó el número deseado de tareas a cero (desiredCount = 0). El clúster, "
-    "la definición de tarea y el servicio se conservan porque no cuestan sin tareas. "
-    "El NAT Gateway se elimina porque cobra por hora independientemente del tráfico.")
-
-body(doc, "Evidencia del servicio reducido a cero tareas:")
-add_image(doc, I["c5_cero"], Inches(6.2),
-    "C6: desiredCount = 0, runningCount = 0 — servicio en cero tareas al cierre")
-doc.add_paragraph()
-
-# ─── 9. COSTOS Y SEGURIDAD ───────────────────────────────────────────────────
-section_title(doc, "9. Costos y seguridad")
-
-sub_title(doc, "9.1 Cuidado con el gasto")
-body(doc,
-    "El cómputo Fargate cobra por segundo de recursos asignados. Dejar 2 tareas "
-    "corriendo el fin de semana cuesta aproximadamente $3.34 USD (cómputo + memoria "
-    "+ NAT Gateway). Por eso la reducción a cero del paso 8 es obligatoria.")
-
-sub_title(doc, "9.2 Lo que se conserva (no cuesta)")
-for item in [
-    "Clúster ECS — no cuesta sin tareas ejecutándose",
-    "Definición de tarea — es un documento, no un recurso en ejecución",
-    "Servicio en 0 tareas — no hay tareas para cobrar",
-    "Target group, security groups, roles IAM — sin costo de cómputo",
-]:
-    bul = doc.add_paragraph(style="List Bullet")
-    bul.add_run(item).font.size = Pt(10)
-
-sub_title(doc, "9.3 Lo que se elimina al cerrar")
-for item in [
-    "NAT Gateway — cobra ~$0.045/hora base + datos procesados",
-    "IP elástica — cobra ~$0.005/hora si no está asociada",
-    "Ruta a internet de la tabla privada — sin costo, pero se limpia",
-]:
-    bul = doc.add_paragraph(style="List Bullet")
-    bul.add_run(item).font.size = Pt(10)
+tbl3 = doc.add_table(rows=5, cols=2)
+tbl3.style = "Table Grid"
+header_row(tbl3, "Configuración", "Valor")
+for i, (k, v) in enumerate([
+    ("Subredes",        "subnet-0b6549d5a7ccc669f (priv-1) + subnet-0aaa291c3653ab724 (priv-2)"),
+    ("IP pública",      "DISABLED — sin dirección pública"),
+    ("SG de las tareas","sg-01ee91ee9d619b538 — puerto 3000 solo desde SG del ALB"),
+    ("Target group",    "tg-ecs-los-rojos — tipo ip (no instance), health GET /health"),
+], 1):
+    data_row(tbl3, i, k, v)
 
 doc.add_paragraph()
+add_image(doc, I["c3_alb"], Inches(6.2),
+    "C2 (1/3): URL del balanceador + health check HTTP 200 + "
+    "respuesta {status:ok, db:ok} desde el contenedor")
+add_image(doc, I["c3_health"], Inches(6.2),
+    "C2 (2/3): Endpoint /health respondiendo HTTP 200 con status:ok y db:ok — "
+    "la aplicación sirve desde los contenedores Fargate")
+add_image(doc, I["c3_sg"], Inches(6.2),
+    "C2 (3/3): SG de las tareas — solo puerto 3000 desde el SG del ALB, "
+    "sin regla 0.0.0.0/0; internet no puede conectarse directamente")
+add_image(doc, I["c3_ok"], Inches(6.2),
+    "Confirmación final: curl al ALB retorna {status:ok, db:ok} — "
+    "la base de datos responde correctamente desde el contenedor")
+doc.add_paragraph()
 
-# ─── 10. LISTA DE COTEJO ─────────────────────────────────────────────────────
-section_title(doc, "10. Lista de cotejo")
+# ─── 6. REPOSICIÓN AUTOMÁTICA ─────────────────────────────────────────────────
+section_title(doc, "6. Reposición automática con tiempo cronometrado (C5 — 25 pts)")
+
+body(doc,
+    "Se detuvo una tarea a propósito con aws ecs stop-task y se cronometró el tiempo "
+    "hasta que ECS repuso una nueva. El resultado se compara con el tiempo medido "
+    "en la práctica 8 con instancias EC2.")
+
+add_image(doc, I["c4_p1"], Inches(6.0),
+    "C5 (1/3): Estado inicial (3 tareas RUNNING) + tarea detenida a propósito "
+    "+ cronómetro iniciado a las 05:53:29")
+add_image(doc, I["c4_p2"], Inches(5.5),
+    "C5 (2/3): Reposición completada en 12 segundos (05:53:29 → 05:53:41) — "
+    "estado después: 2 tareas RUNNING + tabla comparativa ECS vs EC2")
+add_image(doc, I["c4_p3"], Inches(5.5),
+    "C5 (3/3): Tabla comparativa completa + conclusión: el contenedor se repone "
+    "en 12 s frente a los ~120-180 s de una instancia EC2 (factor ~10-15x)")
+
+doc.add_paragraph()
 
 tbl4 = doc.add_table(rows=7, cols=3)
 tbl4.style = "Table Grid"
-header_row(tbl4, "Criterio", "Puntos", "Cumple")
-for i, (c, p, ok) in enumerate([
-    ("El servicio ejecuta la imagen del registro del equipo",                                "20", "✔"),
-    ("La aplicación está en subred privada y solo se accede por el balanceador",              "20", "✔"),
-    ("La configuración se inyecta por variables de entorno",                                  "15", "✔"),
-    ("El rol de la tarea tiene permisos acotados",                                             "10", "✔"),
-    ("Se documenta la reposición automática con tiempo medido y comparación",                 "25", "✔"),
-    ("El servicio quedó en cero tareas al cierre",                                             "10", "✔"),
-], 1):
-    data_row(tbl4, i, c, p, ok, bg="D4EDDA")
+header_row(tbl4, "Métrica", "ECS Fargate (P11)", "EC2 ASG (P08)")
+comparacion = [
+    ("Tiempo de reposición",     "12 segundos",              "~120-180 s (arranque del SO)"),
+    ("Que se reemplaza",         "Contenedor (tarea)",        "Instancia EC2 completa"),
+    ("Inicia sistema operativo", "No (Fargate lo gestiona)",  "Si (boot completo de Linux)"),
+    ("Descarga imagen",          "Si (de ECR, ~5-10 s)",     "Si (AMI de EBS, ~30-60 s)"),
+    ("Inicia aplicacion",        "Si (Node ~2 s)",            "Si (PM2/Nginx ~10-20 s)"),
+    ("Escala a cero",            "Si (desiredCount = 0)",    "No (min = 2 en P08)"),
+]
+for i, (m, ecs, ec2) in enumerate(comparacion, 1):
+    bg = "D4EDDA" if i == 1 else ("F7F7F7" if i % 2 == 0 else "FFFFFF")
+    data_row(tbl4, i, m, ecs, ec2, bg=bg)
 
-# Total
-row = tbl4.rows[6]
-for cell, text in zip(row.cells, ["Total", "100", "✔"]):
+doc.add_paragraph()
+nota_recuadro(doc,
+    "DATO PARA LA DEFENSA ORAL: El contenedor se repone en 12 segundos, frente a "
+    "los ~120-180 segundos que tarda una instancia EC2 (practica 8). "
+    "La diferencia es de un factor de ~10-15x a favor de los contenedores, "
+    "porque un contenedor no inicia el sistema operativo — solo el proceso Node.js.",
+    bg="D4EDDA")
+doc.add_paragraph()
+
+# ─── 7. REDUCIR A CERO ────────────────────────────────────────────────────────
+section_title(doc, "7. Servicio reducido a cero tareas al cierre (C6 — 10 pts)")
+
+body(doc,
+    "Al terminar la sesión se ajustó el desiredCount a 0 y se eliminó el NAT "
+    "Gateway para no acumular consumo. El clúster, la definición de tarea y el "
+    "servicio se conservan porque no cuestan sin tareas.")
+
+add_image(doc, I["c5_p1"], Inches(6.0),
+    "C6 (1/2): Estado antes (2/2 corriendo) + reduccion a desiredCount=0 "
+    "+ estado despues: 0 corriendo, 0 deseadas, 0 pendientes")
+add_image(doc, I["c5_p2"], Inches(5.5),
+    "C6 (2/2): Confirmacion sin tareas en ejecucion + calculo de costo "
+    "del fin de semana (~$3.34 USD) si se deja corriendo")
+add_image(doc, I["parar"], Inches(5.5),
+    "parar-p11.sh: NAT Gateway eliminado, IP elastica liberada, "
+    "ruta privada quitada — resumen de lo detenido vs conservado")
+
+doc.add_paragraph()
+nota_recuadro(doc,
+    "COSTO: Fargate cobra por segundo de recursos asignados. "
+    "Dejar 2 tareas corriendo el fin de semana cuesta ~$3.34 USD "
+    "(computo + memoria + NAT Gateway). La reduccion a cero NO es opcional.",
+    bg="F8D7DA")
+doc.add_paragraph()
+
+# ─── 8. LISTA DE COTEJO ────────────────────────────────────────────────────────
+section_title(doc, "8. Lista de cotejo")
+
+tbl5 = doc.add_table(rows=7, cols=3)
+tbl5.style = "Table Grid"
+header_row(tbl5, "Criterio", "Puntos", "Cumple")
+criterios = [
+    ("El servicio ejecuta la imagen del registro del equipo",                        "20", "si"),
+    ("La aplicacion esta en subred privada y solo se accede por el balanceador",     "20", "si"),
+    ("La configuracion se inyecta por variables de entorno",                          "15", "si"),
+    ("El rol de la tarea tiene permisos acotados",                                    "10", "si"),
+    ("Se documenta la reposicion automatica con tiempo medido y comparacion",        "25", "si"),
+    ("El servicio quedo en cero tareas al cierre",                                    "10", "si"),
+]
+for i, (c, p, ok) in enumerate(criterios, 1):
+    data_row(tbl5, i, c, p, ok, bg="D4EDDA")
+row = tbl5.rows[6]
+for cell, text in zip(row.cells, ["Total", "100", "si"]):
     cell.text = ""
-    run = cell.paragraphs[0].add_run(str(text))
-    run.font.bold = True
-    run.font.size = Pt(10)
+    run = cell.paragraphs[0].add_run(text)
+    run.font.bold = True; run.font.size = Pt(10)
     shading_cell(cell, "D4EDDA")
 
 doc.add_paragraph()
 
-# ─── 11. REPOSITORIO ─────────────────────────────────────────────────────────
-section_title(doc, "11. Código en el repositorio")
-
+# ─── 9. REPOSITORIO ────────────────────────────────────────────────────────────
+section_title(doc, "9. Codigo en el repositorio")
 body(doc, "https://github.com/Angektam/Computo-en-la-nube--Servidor/tree/main/practica11")
 
 archivos = [
-    ("practica11/aws-practica11-ecs-fargate.sh",     "Despliegue completo: clúster, NAT, roles, tarea, servicio"),
-    ("practica11/evidencia-p11-c1-tarea.sh",         "Evidencia: definición de tarea con recursos y puerto"),
-    ("practica11/evidencia-p11-c2-variables.sh",     "Evidencia: variables de entorno inyectadas (sensibles enmascaradas)"),
-    ("practica11/evidencia-p11-c3-balanceador.sh",   "Evidencia: app respondiendo por el balanceador + subred privada"),
-    ("practica11/evidencia-p11-c4-reposicion.sh",    "Evidencia: reposición automática con tiempo cronometrado"),
-    ("practica11/evidencia-p11-c5-cero-tareas.sh",   "Evidencia: servicio reducido a cero tareas"),
-    ("practica11/parar-p11.sh",                      "Parar todo: reducir a 0 + eliminar NAT Gateway"),
+    ("practica11/aws-practica11-ecs-fargate.sh",   "Despliegue completo (13 pasos)"),
+    ("practica11/evidencia-p11-c1-tarea.sh",        "Evidencia: task definition, roles, tareas"),
+    ("practica11/evidencia-p11-c2-variables.sh",    "Evidencia: variables inyectadas (sensibles enmascarados)"),
+    ("practica11/evidencia-p11-c3-balanceador.sh",  "Evidencia: app respondiendo por el ALB"),
+    ("practica11/evidencia-p11-c4-reposicion.sh",   "Evidencia: reposicion con tiempo cronometrado"),
+    ("practica11/evidencia-p11-c5-cero-tareas.sh",  "Evidencia: servicio en 0 tareas"),
+    ("practica11/parar-p11.sh",                      "Parar todo: 0 tareas + eliminar NAT Gateway"),
 ]
-tbl5 = doc.add_table(rows=len(archivos)+1, cols=2)
-tbl5.style = "Table Grid"
-header_row(tbl5, "Archivo", "Descripción")
+tbl6 = doc.add_table(rows=len(archivos)+1, cols=2)
+tbl6.style = "Table Grid"
+header_row(tbl6, "Archivo", "Descripcion")
 for i, (f, d) in enumerate(archivos, 1):
-    data_row(tbl5, i, f, d)
+    data_row(tbl6, i, f, d)
 
 doc.add_paragraph()
 
-# ─── FOOTER ───────────────────────────────────────────────────────────────────
+# ─── FOOTER ────────────────────────────────────────────────────────────────────
 pie = doc.add_paragraph()
 pie.alignment = WD_ALIGN_PARAGRAPH.CENTER
-r = pie.add_run("Práctica 11 · Equipo Los Rojos · Cómputo en la Nube · UAS · 4 nov 2026")
+r = pie.add_run("Practica 11 · Equipo Los Rojos · Computo en la Nube · UAS · 4 nov 2026")
 r.font.size = Pt(9); r.font.italic = True
 r.font.color.rgb = RGBColor(120, 120, 120)
 
 # =============================================================================
 doc.save(OUTPUT)
-print(f"✔  Documento generado: {OUTPUT}")
+print(f"Documento generado: {OUTPUT}")
