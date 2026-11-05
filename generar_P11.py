@@ -209,15 +209,17 @@ for r in sub.runs:
     r.font.color.rgb = RGBColor(60, 60, 60)
 
 doc.add_paragraph()
-meta = doc.add_table(rows=5, cols=2)
+meta = doc.add_table(rows=7, cols=2)
 meta.style = "Table Grid"
 for i, (k, v) in enumerate([
-    ("Equipo",   "Los Rojos"),
-    ("Materia",  "Cómputo en la Nube"),
-    ("Unidad",   "Unidad II · Segundo parcial"),
-    ("Sesión",   "Miércoles 4 de noviembre de 2026"),
-    ("Objetivo", "Desplegar la imagen del proyecto en ECS Fargate y exponerla "
-                 "mediante el balanceador de carga."),
+    ("Equipo",       "Los Rojos"),
+    ("Materia",      "Cómputo en la Nube"),
+    ("Unidad",       "Unidad II · Segundo parcial"),
+    ("Sesión",       "Miércoles 4 de noviembre de 2026"),
+    ("Objetivo",     "Desplegar la imagen del proyecto en ECS Fargate y exponerla "
+                     "mediante el balanceador de carga."),
+    ("Integrantes",  "Flores Guevara Ángel Gabriel\nKevin Ricardo López Payán"),
+    ("Docente",      "Elizabeth Gaxiola Carrillo"),
 ]):
     meta.cell(i, 0).text = k
     meta.cell(i, 1).text = v
