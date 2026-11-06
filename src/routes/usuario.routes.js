@@ -21,9 +21,14 @@ router.get('/', permitirRoles('administrador'), async (_req, res, next) => {
 
 /** POST /api/usuarios — Crea un usuario */
 router.post('/', permitirRoles('administrador'), async (req, res, next) => {
-  const { nombre, correo, password, rol } = req.body;
-  if (!nombre || !correo || !password || !rol) {
+  const nombre = typeof req.body.nombre === 'string' ? req.body.nombre.trim() : '';
+  const correo = typeof req.body.correo === 'string' ? req.body.correo.trim().toLowerCase() : '';
+  const { password, rol } = req.body;
+  if (!nombre || !correo || typeof password !== 'string' || !rol) {
     return res.status(400).json({ error: 'Nombre, correo, contraseña y rol son obligatorios' });
+  }
+  if (nombre.length > 100 || correo.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    return res.status(400).json({ error: 'Nombre o correo inválido' });
   }
   if (!['administrador', 'bodega', 'cajero'].includes(rol)) {
     return res.status(400).json({ error: 'Rol inválido' });
@@ -35,7 +40,7 @@ router.post('/', permitirRoles('administrador'), async (req, res, next) => {
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
       'INSERT INTO usuarios (nombre, correo, password, rol) VALUES ($1,$2,$3,$4) RETURNING id, nombre, correo, rol, activo, creado_en',
-      [nombre.trim(), correo.trim().toLowerCase(), hash, rol]
+      [nombre, correo, hash, rol]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -46,15 +51,20 @@ router.post('/', permitirRoles('administrador'), async (req, res, next) => {
 
 /** PUT /api/usuarios/:id — Edita nombre, rol y estado */
 router.put('/:id', permitirRoles('administrador'), async (req, res, next) => {
-  const { nombre, rol, activo } = req.body;
+  const nombre = typeof req.body.nombre === 'string' ? req.body.nombre.trim() : '';
+  const { rol, activo } = req.body;
   if (!nombre || !rol) return res.status(400).json({ error: 'Nombre y rol son obligatorios' });
+  if (nombre.length > 100) return res.status(400).json({ error: 'El nombre no puede superar 100 caracteres' });
   if (!['administrador', 'bodega', 'cajero'].includes(rol)) {
     return res.status(400).json({ error: 'Rol inválido' });
+  }
+  if (activo !== undefined && typeof activo !== 'boolean') {
+    return res.status(400).json({ error: 'El estado del usuario debe ser verdadero o falso' });
   }
   try {
     const { rows } = await pool.query(
       'UPDATE usuarios SET nombre=$1, rol=$2, activo=$3 WHERE id=$4 RETURNING id, nombre, correo, rol, activo, creado_en',
-      [nombre.trim(), rol, activo !== undefined ? activo : true, req.params.id]
+      [nombre, rol, activo !== undefined ? activo : true, req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(rows[0]);
