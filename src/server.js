@@ -17,6 +17,8 @@ const usuarioRoutes    = require('./routes/usuario.routes');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
+
 // ── Seguridad ──────────────────────────────────────────────────
 // Relajar CSP para permitir que el frontend cargue sus propios scripts/estilos
 app.use(helmet({

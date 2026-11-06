@@ -16,7 +16,7 @@ const { verificarToken, permitirRoles } = require('../middleware/auth.middleware
 router.use(verificarToken);
 
 const BUCKET = process.env.S3_BUCKET;
-const REGION = process.env.AWS_REGION || 'us-east-1';
+const REGION = process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1';
 
 // Multer en memoria — no guarda archivos en disco de la VM
 const upload = multer({
