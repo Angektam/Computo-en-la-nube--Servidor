@@ -4,6 +4,30 @@
 const Productos = (() => {
   let todos = [];
   let vistaActual = 'cards'; // 'cards' | 'tabla'
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[char]);
+  const productoId = (producto) => {
+    const id = Number(producto.id);
+    return Number.isSafeInteger(id) && id > 0 ? id : 0;
+  };
+  const imagenSrc = (value) => {
+    try {
+      const url = new URL(value, window.location.origin);
+      return ['http:', 'https:'].includes(url.protocol) ? escapeHtml(url.href) : '';
+    } catch {
+      return '';
+    }
+  };
+
+  function mostrarError(container, mensaje) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p></p></div>';
+    container.querySelector('p').textContent = mensaje;
+  }
 
   // ── Render Cards ────────────────────────────────────────────
   function renderCards(lista) {
@@ -16,10 +40,10 @@ const Productos = (() => {
     const puedeEliminar = Auth.tieneRol('administrador');
 
     c.innerHTML = `<div class="productos-grid">${lista.map(p => `
-      <div class="producto-card" onclick="Productos.verDetalle(${p.id})">
+      <div class="producto-card" onclick="Productos.verDetalle(${productoId(p)})">
         <div class="producto-img">
-          ${p.imagen_url
-            ? `<img src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'img-placeholder\\'>📦</span>'" />`
+          ${imagenSrc(p.imagen_url)
+            ? `<img src="${imagenSrc(p.imagen_url)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'img-placeholder\\'>📦</span>'" />`
             : `<span class="img-placeholder">📦</span>`}
           ${p.stock_actual <= 0
             ? `<span class="img-badge red">Sin stock</span>`
@@ -28,20 +52,20 @@ const Productos = (() => {
               : ''}
         </div>
         <div class="producto-card-body">
-          <div class="producto-card-code">${p.codigo}</div>
-          <div class="producto-card-name">${p.nombre}</div>
-          ${p.categoria ? `<div class="producto-card-cat">${p.categoria}</div>` : ''}
+          <div class="producto-card-code">${escapeHtml(p.codigo)}</div>
+          <div class="producto-card-name">${escapeHtml(p.nombre)}</div>
+          ${p.categoria ? `<div class="producto-card-cat">${escapeHtml(p.categoria)}</div>` : ''}
           <div class="producto-card-footer">
-            <span class="producto-card-price">$${Number(p.precio).toFixed(2)}</span>
+            <span class="producto-card-price">$${escapeHtml(Number(p.precio).toFixed(2))}</span>
             <span class="producto-card-stock ${p.stock_actual < p.stock_minimo ? 'low' : ''}">
-              ${p.stock_actual} ${p.unidad || 'pzs'}
+              ${escapeHtml(p.stock_actual)} ${escapeHtml(p.unidad || 'pzs')}
             </span>
           </div>
           ${(puedeEditar || puedeEliminar) ? `
           <div class="producto-card-actions" onclick="event.stopPropagation()">
-            ${puedeEditar ? `<button class="btn-primary btn-sm" onclick="Productos.editar(${p.id})">✏️ Editar</button>` : ''}
-            ${puedeEditar ? `<button class="btn-secondary btn-sm" onclick="Productos.subirImagen(${p.id},'${p.nombre.replace(/'/g,"\\'")}')">🖼 Imagen</button>` : ''}
-            ${puedeEliminar ? `<button class="btn-danger btn-sm" onclick="Productos.eliminar(${p.id},'${p.nombre.replace(/'/g,"\\'")}')">🗑</button>` : ''}
+            ${puedeEditar ? `<button class="btn-primary btn-sm" onclick="Productos.editar(${productoId(p)})">✏️ Editar</button>` : ''}
+            ${puedeEditar ? `<button class="btn-secondary btn-sm" onclick="Productos.subirImagen(${productoId(p)})">🖼 Imagen</button>` : ''}
+            ${puedeEliminar ? `<button class="btn-danger btn-sm" onclick="Productos.eliminar(${productoId(p)})">🗑</button>` : ''}
           </div>` : ''}
         </div>
       </div>`).join('')}</div>`;
@@ -71,24 +95,24 @@ const Productos = (() => {
               <tr style="cursor:pointer" onclick="Productos.verDetalle(${p.id})">
                 <td onclick="event.stopPropagation()" style="padding:.5rem .75rem">
                   <div class="tabla-img">
-                    ${p.imagen_url
-                      ? `<img src="${p.imagen_url}" alt="${p.nombre}" onerror="this.parentElement.innerHTML='📦'" />`
+                    ${imagenSrc(p.imagen_url)
+                      ? `<img src="${imagenSrc(p.imagen_url)}" alt="${escapeHtml(p.nombre)}" onerror="this.parentElement.innerHTML='📦'" />`
                       : '📦'}
                   </div>
                 </td>
-                <td><span class="td-code">${p.codigo}</span></td>
-                <td><strong>${p.nombre}</strong>${p.descripcion ? `<br><small style="color:var(--texto-sec)">${p.descripcion}</small>` : ''}</td>
-                <td>${p.categoria ? `<span class="badge-info">${p.categoria}</span>` : '<span style="color:var(--gris)">—</span>'}</td>
-                <td>$${Number(p.precio).toFixed(2)}</td>
-                <td><strong>${p.stock_actual}</strong> <small style="color:var(--texto-sec)">${p.unidad||'pzs'}</small></td>
-                <td style="color:var(--texto-sec)">${p.stock_minimo}</td>
+                <td><span class="td-code">${escapeHtml(p.codigo)}</span></td>
+                <td><strong>${escapeHtml(p.nombre)}</strong>${p.descripcion ? `<br><small style="color:var(--texto-sec)">${escapeHtml(p.descripcion)}</small>` : ''}</td>
+                <td>${p.categoria ? `<span class="badge-info">${escapeHtml(p.categoria)}</span>` : '<span style="color:var(--gris)">—</span>'}</td>
+                <td>$${escapeHtml(Number(p.precio).toFixed(2))}</td>
+                <td><strong>${escapeHtml(p.stock_actual)}</strong> <small style="color:var(--texto-sec)">${escapeHtml(p.unidad||'pzs')}</small></td>
+                <td style="color:var(--texto-sec)">${escapeHtml(p.stock_minimo)}</td>
                 <td>${p.stock_actual<=0 ? '<span class="badge-alerta">🚫 Sin stock</span>' : p.stock_actual<p.stock_minimo ? '<span class="badge-alerta">⚠ Bajo</span>' : '<span class="badge-ok">✓ OK</span>'}</td>
                 ${(puedeEditar||puedeEliminar) ? `
                 <td onclick="event.stopPropagation()">
                   <div style="display:flex;gap:.35rem;justify-content:center">
-                    ${puedeEditar ? `<button class="btn-icon edit" onclick="Productos.editar(${p.id})">✏️</button>` : ''}
-                    ${puedeEditar ? `<button class="btn-icon edit" style="background:#f0fdf4;color:#16a34a" onclick="Productos.subirImagen(${p.id},'${p.nombre.replace(/'/g,"\\'")}')">🖼</button>` : ''}
-                    ${puedeEliminar ? `<button class="btn-danger btn-sm" onclick="Productos.eliminar(${p.id},'${p.nombre.replace(/'/g,"\\'")}')">🗑</button>` : ''}
+                    ${puedeEditar ? `<button class="btn-icon edit" onclick="Productos.editar(${productoId(p)})">✏️</button>` : ''}
+                    ${puedeEditar ? `<button class="btn-icon edit" style="background:#f0fdf4;color:#16a34a" onclick="Productos.subirImagen(${productoId(p)})">🖼</button>` : ''}
+                    ${puedeEliminar ? `<button class="btn-danger btn-sm" onclick="Productos.eliminar(${productoId(p)})">🗑</button>` : ''}
                   </div>
                 </td>` : ''}
               </tr>`).join('')}
@@ -109,7 +133,7 @@ const Productos = (() => {
       todos = await api.get('/productos');
       render(todos);
     } catch (err) {
-      c.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><p>${err.message}</p></div>`;
+      mostrarError(c, err.message);
       Toast.error('Error al cargar productos: ' + err.message);
     }
   }
@@ -146,26 +170,26 @@ const Productos = (() => {
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
         <div style="flex:0 0 160px">
           <div class="detalle-img-wrap">
-            ${p.imagen_url
-              ? `<img src="${p.imagen_url}" alt="${p.nombre}" style="width:160px;height:160px;object-fit:cover;border-radius:var(--radio)" onerror="this.parentElement.innerHTML='<div class=\\'detalle-img-placeholder\\'>📦</div>'" />`
+            ${imagenSrc(p.imagen_url)
+              ? `<img src="${imagenSrc(p.imagen_url)}" alt="${escapeHtml(p.nombre)}" style="width:160px;height:160px;object-fit:cover;border-radius:var(--radio)" onerror="this.parentElement.innerHTML='<div class=\\'detalle-img-placeholder\\'>📦</div>'" />`
               : `<div class="detalle-img-placeholder">📦</div>`}
           </div>
           ${puedeEditar ? `
-          <button class="btn-secondary btn-sm" style="width:100%;margin-top:.6rem" onclick="Productos.subirImagen(${p.id},'${p.nombre.replace(/'/g,"\\'")}')">
+          <button class="btn-secondary btn-sm" style="width:100%;margin-top:.6rem" onclick="Productos.subirImagen(${productoId(p)})">
             🖼 ${p.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
           </button>` : ''}
         </div>
         <div style="flex:1;min-width:200px">
           <div style="margin-bottom:1rem">
-            <span class="td-code">${p.codigo}</span>
-            ${p.categoria ? `<span class="badge-info" style="margin-left:.5rem">${p.categoria}</span>` : ''}
+            <span class="td-code">${escapeHtml(p.codigo)}</span>
+            ${p.categoria ? `<span class="badge-info" style="margin-left:.5rem">${escapeHtml(p.categoria)}</span>` : ''}
           </div>
-          <h3 style="font-size:1.15rem;margin-bottom:.35rem">${p.nombre}</h3>
-          ${p.descripcion ? `<p style="color:var(--texto-sec);font-size:.875rem;margin-bottom:.75rem">${p.descripcion}</p>` : ''}
+          <h3 style="font-size:1.15rem;margin-bottom:.35rem">${escapeHtml(p.nombre)}</h3>
+          ${p.descripcion ? `<p style="color:var(--texto-sec);font-size:.875rem;margin-bottom:.75rem">${escapeHtml(p.descripcion)}</p>` : ''}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.75rem">
-            <div class="detalle-stat"><span class="detalle-stat-val">$${Number(p.precio).toFixed(2)}</span><span class="detalle-stat-lbl">Precio</span></div>
-            <div class="detalle-stat"><span class="detalle-stat-val ${p.stock_actual < p.stock_minimo ? 'status-alerta' : 'status-ok'}">${p.stock_actual}</span><span class="detalle-stat-lbl">Stock actual (${p.unidad||'pzs'})</span></div>
-            <div class="detalle-stat"><span class="detalle-stat-val">${p.stock_minimo}</span><span class="detalle-stat-lbl">Stock mínimo</span></div>
+            <div class="detalle-stat"><span class="detalle-stat-val">$${escapeHtml(Number(p.precio).toFixed(2))}</span><span class="detalle-stat-lbl">Precio</span></div>
+            <div class="detalle-stat"><span class="detalle-stat-val ${p.stock_actual < p.stock_minimo ? 'status-alerta' : 'status-ok'}">${escapeHtml(p.stock_actual)}</span><span class="detalle-stat-lbl">Stock actual (${escapeHtml(p.unidad||'pzs')})</span></div>
+            <div class="detalle-stat"><span class="detalle-stat-val">${escapeHtml(p.stock_minimo)}</span><span class="detalle-stat-lbl">Stock mínimo</span></div>
             <div class="detalle-stat">
               <span class="detalle-stat-val">
                 ${p.stock_actual<=0 ? '<span class="badge-alerta">Sin stock</span>' : p.stock_actual<p.stock_minimo ? '<span class="badge-alerta">Bajo mínimo</span>' : '<span class="badge-ok">OK</span>'}
@@ -183,7 +207,9 @@ const Productos = (() => {
   }
 
   // ── Subir imagen ────────────────────────────────────────────
-  function subirImagen(id, nombre) {
+  function subirImagen(id) {
+    const producto = todos.find(x => x.id === id);
+    if (!producto) return;
     Modal.abrir(`
       <div class="form-modal">
         <div id="preview-wrap" style="text-align:center;margin-bottom:1rem;display:none">
@@ -200,7 +226,7 @@ const Productos = (() => {
           <button class="btn-primary" id="btn-upload-img" disabled>📤 Subir imagen</button>
         </div>
         <p id="upload-error" class="error-msg hidden"></p>
-      </div>`, `🖼 Imagen — ${nombre}`);
+      </div>`, `🖼 Imagen — ${producto.nombre}`);
 
     const input   = document.getElementById('img-file');
     const preview = document.getElementById('img-preview');
@@ -266,7 +292,7 @@ const Productos = (() => {
   function categoriaOptions(selId = '') {
     const cats = typeof Categorias !== 'undefined' ? Categorias.getTodas() : [];
     return `<option value="">— Sin categoría —</option>` +
-      cats.map(c => `<option value="${c.id}" ${c.id == selId ? 'selected' : ''}>${c.nombre}</option>`).join('');
+      cats.map(c => `<option value="${escapeHtml(c.id)}" ${c.id == selId ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('');
   }
 
   function formHTML(p = {}) {
@@ -275,20 +301,20 @@ const Productos = (() => {
         <div class="form-fila">
           <label>
             <span class="form-label">Código *</span>
-            <input id="f-codigo" value="${p.codigo||''}" ${p.id?'readonly':'required'} placeholder="PROD-001" />
+            <input id="f-codigo" value="${escapeHtml(p.codigo||'')}" ${p.id?'readonly':'required'} placeholder="PROD-001" />
           </label>
           <label>
             <span class="form-label">Unidad</span>
-            <input id="f-unidad" value="${p.unidad||'pieza'}" placeholder="pieza, kg, caja…" />
+            <input id="f-unidad" value="${escapeHtml(p.unidad||'pieza')}" placeholder="pieza, kg, caja…" />
           </label>
         </div>
         <label>
           <span class="form-label">Nombre *</span>
-          <input id="f-nombre" value="${p.nombre||''}" required placeholder="Nombre del producto" />
+          <input id="f-nombre" value="${escapeHtml(p.nombre||'')}" required placeholder="Nombre del producto" />
         </label>
         <label>
           <span class="form-label">Descripción</span>
-          <textarea id="f-descripcion" rows="2" placeholder="Descripción opcional">${p.descripcion||''}</textarea>
+          <textarea id="f-descripcion" rows="2" placeholder="Descripción opcional">${escapeHtml(p.descripcion||'')}</textarea>
         </label>
         <label>
           <span class="form-label">Categoría</span>
@@ -297,16 +323,16 @@ const Productos = (() => {
         <div class="form-fila">
           <label>
             <span class="form-label">Precio ($)</span>
-            <input id="f-precio" type="number" min="0" step="0.01" value="${p.precio||0}" />
+            <input id="f-precio" type="number" min="0" step="0.01" value="${escapeHtml(p.precio||0)}" />
           </label>
           <label>
             <span class="form-label">Stock ${p.id?'(via movimientos)':'inicial'}</span>
-            <input id="f-stock" type="number" min="0" value="${p.stock_actual||0}" ${p.id?'readonly':''} />
+            <input id="f-stock" type="number" min="0" value="${escapeHtml(p.stock_actual||0)}" ${p.id?'readonly':''} />
           </label>
         </div>
         <label>
           <span class="form-label">Stock mínimo</span>
-          <input id="f-minimo" type="number" min="1" value="${p.stock_minimo||5}" />
+          <input id="f-minimo" type="number" min="1" value="${escapeHtml(p.stock_minimo||5)}" />
         </label>
         <div class="form-actions">
           <button class="btn-secondary" type="button" onclick="Modal.cerrar()">Cancelar</button>
@@ -380,11 +406,13 @@ const Productos = (() => {
     };
   }
 
-  function eliminar(id, nombre) {
+  function eliminar(id) {
+    const producto = todos.find(x => x.id === id);
+    if (!producto) return;
     Modal.abrir(`
       <div class="confirm-dialog">
         <div class="confirm-icon">🗑️</div>
-        <p>¿Desactivar <strong>"${nombre}"</strong>?<br>Sus movimientos se conservarán.</p>
+        <p>¿Desactivar <strong>"${escapeHtml(producto.nombre)}"</strong>?<br>Sus movimientos se conservarán.</p>
         <div class="confirm-actions">
           <button class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
           <button class="btn-danger" id="btn-confirm-del-prod">Sí, desactivar</button>

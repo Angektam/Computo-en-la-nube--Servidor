@@ -9,7 +9,11 @@ const Toast = (() => {
     const toast = document.createElement('div');
     toast.className = `toast ${tipo}`;
     const iconos = { success: '✓', error: '✕', warning: '⚠', default: 'ℹ' };
-    toast.innerHTML = `<span>${iconos[tipo] || iconos.default}</span><span>${mensaje}</span>`;
+    const icono = document.createElement('span');
+    icono.textContent = iconos[tipo] || iconos.default;
+    const texto = document.createElement('span');
+    texto.textContent = mensaje;
+    toast.append(icono, texto);
     container.appendChild(toast);
     setTimeout(() => {
       toast.style.animation = 'toastOut .25s ease forwards';

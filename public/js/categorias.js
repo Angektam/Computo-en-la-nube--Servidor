@@ -3,6 +3,17 @@
  */
 const Categorias = (() => {
   let todas = [];
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[char]);
+  const categoriaId = (categoria) => {
+    const id = Number(categoria.id);
+    return Number.isSafeInteger(id) && id > 0 ? id : 0;
+  };
 
   function renderTabla(lista) {
     const c = document.getElementById('tabla-categorias');
@@ -26,16 +37,16 @@ const Categorias = (() => {
           <tbody>
             ${lista.map(cat => `
               <tr>
-                <td style="color:var(--texto-sec)">${cat.id}</td>
-                <td><strong>${cat.nombre}</strong></td>
-                <td style="color:var(--texto-sec)">${cat.descripcion || '<span style="color:var(--gris)">—</span>'}</td>
+                <td style="color:var(--texto-sec)">${escapeHtml(cat.id)}</td>
+                <td><strong>${escapeHtml(cat.nombre)}</strong></td>
+                <td style="color:var(--texto-sec)">${cat.descripcion ? escapeHtml(cat.descripcion) : '<span style="color:var(--gris)">—</span>'}</td>
                 <td style="text-align:center">
                   <span class="badge-info">${cat.total_productos}</span>
                 </td>
                 <td>
                   <div style="display:flex;gap:.4rem;justify-content:center">
-                    <button class="btn-icon edit" title="Editar" onclick="Categorias.editar(${cat.id})">✏️</button>
-                    <button class="btn-danger btn-sm" title="Eliminar" onclick="Categorias.eliminar(${cat.id},'${cat.nombre.replace(/'/g,"\\'")}')">🗑</button>
+                    <button class="btn-icon edit" title="Editar" onclick="Categorias.editar(${categoriaId(cat)})">✏️</button>
+                    <button class="btn-danger btn-sm" title="Eliminar" onclick="Categorias.eliminar(${categoriaId(cat)})">🗑</button>
                   </div>
                 </td>
               </tr>`).join('')}
@@ -52,7 +63,8 @@ const Categorias = (() => {
       todas = await api.get('/categorias');
       renderTabla(todas);
     } catch (err) {
-      c.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><p>${err.message}</p></div>`;
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p></p></div>';
+      c.querySelector('p').textContent = err.message;
     }
   }
 
@@ -61,11 +73,11 @@ const Categorias = (() => {
       <div class="form-modal">
         <label>
           <span class="form-label">Nombre *</span>
-          <input id="cat-nombre" value="${cat.nombre || ''}" required placeholder="Ej. Electrónicos, Ropa, Alimentos…" />
+          <input id="cat-nombre" value="${escapeHtml(cat.nombre || '')}" required placeholder="Ej. Electrónicos, Ropa, Alimentos…" />
         </label>
         <label>
           <span class="form-label">Descripción</span>
-          <textarea id="cat-desc" rows="2" placeholder="Descripción opcional">${cat.descripcion || ''}</textarea>
+          <textarea id="cat-desc" rows="2" placeholder="Descripción opcional">${escapeHtml(cat.descripcion || '')}</textarea>
         </label>
         <div class="form-actions">
           <button class="btn-secondary" type="button" onclick="Modal.cerrar()">Cancelar</button>
@@ -129,11 +141,13 @@ const Categorias = (() => {
     };
   }
 
-  function eliminar(id, nombre) {
+  function eliminar(id) {
+    const categoria = todas.find(x => x.id === id);
+    if (!categoria) return;
     Modal.abrir(`
       <div class="confirm-dialog">
         <div class="confirm-icon">🗑️</div>
-        <p>¿Eliminar la categoría <strong>"${nombre}"</strong>?<br>
+        <p>¿Eliminar la categoría <strong>"${escapeHtml(categoria.nombre)}"</strong>?<br>
         Solo se puede eliminar si no tiene productos asignados.</p>
         <div class="confirm-actions">
           <button class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
