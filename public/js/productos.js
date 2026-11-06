@@ -36,7 +36,7 @@ const Productos = (() => {
       c.innerHTML = `<div class="empty-state" style="padding:3rem"><div class="empty-icon">🗂</div><p>No se encontraron productos.</p></div>`;
       return;
     }
-    const puedeEditar  = Auth.tieneRol('administrador','bodega');
+    const puedeEditar  = Auth.tieneRol('bodega');
     const puedeEliminar = Auth.tieneRol('administrador');
 
     c.innerHTML = `<div class="productos-grid">${lista.map(p => `
@@ -78,7 +78,7 @@ const Productos = (() => {
       c.innerHTML = `<div class="empty-state" style="padding:2.5rem"><div class="empty-icon">🗂</div><p>No se encontraron productos.</p></div>`;
       return;
     }
-    const puedeEditar   = Auth.tieneRol('administrador','bodega');
+    const puedeEditar   = Auth.tieneRol('bodega');
     const puedeEliminar = Auth.tieneRol('administrador');
 
     c.innerHTML = `
@@ -165,7 +165,7 @@ const Productos = (() => {
   function verDetalle(id) {
     const p = todos.find(x => x.id === id);
     if (!p) return;
-    const puedeEditar = Auth.tieneRol('administrador','bodega');
+    const puedeEditar = Auth.tieneRol('bodega');
     Modal.abrir(`
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
         <div style="flex:0 0 160px">
@@ -208,6 +208,10 @@ const Productos = (() => {
 
   // ── Subir imagen ────────────────────────────────────────────
   function subirImagen(id) {
+    if (!Auth.tieneRol('bodega')) {
+      Toast.error('Solo el personal de bodega puede editar productos.');
+      return;
+    }
     const producto = todos.find(x => x.id === id);
     if (!producto) return;
     Modal.abrir(`
@@ -301,7 +305,7 @@ const Productos = (() => {
         <div class="form-fila">
           <label>
             <span class="form-label">Código *</span>
-            <input id="f-codigo" value="${escapeHtml(p.codigo||'')}" ${p.id?'readonly':'required'} placeholder="PROD-001" />
+            <input id="f-codigo" value="${escapeHtml(p.codigo||'')}" required placeholder="PROD-001" />
           </label>
           <label>
             <span class="form-label">Unidad</span>
@@ -326,13 +330,13 @@ const Productos = (() => {
             <input id="f-precio" type="number" min="0" step="0.01" value="${escapeHtml(p.precio||0)}" />
           </label>
           <label>
-            <span class="form-label">Stock ${p.id?'(via movimientos)':'inicial'}</span>
-            <input id="f-stock" type="number" min="0" value="${escapeHtml(p.stock_actual||0)}" ${p.id?'readonly':''} />
+            <span class="form-label">Stock ${p.id?'actual (se registrará ajuste)':'inicial'}</span>
+            <input id="f-stock" type="number" min="0" step="1" value="${escapeHtml(p.stock_actual ?? 0)}" />
           </label>
         </div>
         <label>
           <span class="form-label">Stock mínimo</span>
-          <input id="f-minimo" type="number" min="1" value="${escapeHtml(p.stock_minimo||5)}" />
+          <input id="f-minimo" type="number" min="0" value="${escapeHtml(p.stock_minimo ?? 5)}" />
         </label>
         <div class="form-actions">
           <button class="btn-secondary" type="button" onclick="Modal.cerrar()">Cancelar</button>
@@ -376,6 +380,10 @@ const Productos = (() => {
   }
 
   async function editar(id) {
+    if (!Auth.tieneRol('bodega')) {
+      Toast.error('Solo el personal de bodega puede editar productos.');
+      return;
+    }
     const p = todos.find(x => x.id === id);
     if (!p) return;
     Modal.abrir(formHTML(p), '✏️ Editar producto');
@@ -387,10 +395,12 @@ const Productos = (() => {
       btn.innerHTML = '<span class="spinner"></span> Guardando…';
       try {
         await api.put(`/productos/${id}`, {
+          codigo:       document.getElementById('f-codigo').value.trim(),
           nombre:       document.getElementById('f-nombre').value.trim(),
           descripcion:  document.getElementById('f-descripcion').value.trim(),
           categoria_id: document.getElementById('f-categoria').value || null,
           precio:       parseFloat(document.getElementById('f-precio').value),
+          stock_actual: parseInt(document.getElementById('f-stock').value, 10),
           stock_minimo: parseInt(document.getElementById('f-minimo').value),
           unidad:       document.getElementById('f-unidad').value.trim(),
         });

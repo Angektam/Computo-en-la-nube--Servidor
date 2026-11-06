@@ -65,13 +65,13 @@ router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next
 
 /**
  * PUT /api/productos/:id
- * Actualiza un producto. Solo administrador y bodega.
+ * Actualiza un producto. Solo bodega.
  */
-router.put('/:id', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
-  const { nombre, descripcion, categoria_id, precio, stock_minimo, unidad } = req.body;
+router.put('/:id', permitirRoles('bodega'), async (req, res, next) => {
+  const { codigo, nombre, descripcion, categoria_id, precio, stock_actual, stock_minimo, unidad } = req.body;
 
-  if (!nombre || nombre.toString().trim() === '') {
-    return res.status(400).json({ error: 'El nombre es obligatorio' });
+  if ((codigo !== undefined && codigo.toString().trim() === '') || !nombre || nombre.toString().trim() === '') {
+    return res.status(400).json({ error: 'El nombre es obligatorio y el código no puede estar vacío' });
   }
   const precioNum    = parseFloat(precio);
   const minimoNum    = parseInt(stock_minimo);
@@ -81,20 +81,66 @@ router.put('/:id', permitirRoles('administrador', 'bodega'), async (req, res, ne
   if (isNaN(minimoNum) || minimoNum < 0) {
     return res.status(400).json({ error: 'El stock mínimo debe ser un número mayor o igual a 0' });
   }
+  const stockNum = stock_actual === undefined ? null : Number(stock_actual);
+  if (stock_actual !== undefined &&
+      (stock_actual === null || stock_actual === '' || !Number.isInteger(stockNum) || stockNum < 0)) {
+    return res.status(400).json({ error: 'El stock debe ser un número entero mayor o igual a 0' });
+  }
 
+  let client;
   try {
-    const { rows } = await pool.query(`
-      UPDATE productos
-      SET nombre=$1, descripcion=$2, categoria_id=$3, precio=$4,
-          stock_minimo=$5, unidad=$6, actualizado_en=NOW()
-      WHERE id=$7 AND activo=TRUE
-      RETURNING *
-    `, [nombre.toString().trim(), descripcion || null, categoria_id || null,
-        precioNum, minimoNum, unidad || 'pieza', req.params.id]);
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const { rows: existentes } = await client.query(
+      'SELECT stock_actual FROM productos WHERE id=$1 AND activo=TRUE FOR UPDATE',
+      [req.params.id]
+    );
+    if (!existentes[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
 
-    if (!rows[0]) return res.status(404).json({ error: 'Producto no encontrado' });
+    const stockAntes = existentes[0].stock_actual;
+    const stockNuevo = stockNum === null ? stockAntes : stockNum;
+    const { rows } = await client.query(`
+      UPDATE productos
+      SET codigo=COALESCE($1,codigo), nombre=$2, descripcion=$3, categoria_id=$4, precio=$5,
+          stock_actual=$6, stock_minimo=$7, unidad=$8, actualizado_en=NOW()
+      WHERE id=$9 AND activo=TRUE
+      RETURNING *
+    `, [codigo === undefined ? null : codigo.toString().trim(), nombre.toString().trim(), descripcion || null,
+        categoria_id || null, precioNum, stockNuevo, minimoNum, unidad || 'pieza', req.params.id]);
+
+    if (stockNuevo !== stockAntes) {
+      await client.query(`
+        INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad, stock_antes, stock_despues, motivo)
+        VALUES ($1,$2,'ajuste',$3,$4,$3,$5)
+      `, [req.params.id, req.usuario.id, stockNuevo, stockAntes, 'Ajuste de existencias desde edición del producto']);
+
+      if (stockNuevo < minimoNum) {
+        await client.query(`
+          INSERT INTO pedidos (producto_id, cantidad_sugerida)
+          SELECT $1, $2
+          WHERE NOT EXISTS (
+            SELECT 1 FROM pedidos WHERE producto_id = $1 AND estado = 'pendiente'
+          )
+        `, [req.params.id, minimoNum * 2]);
+      }
+    }
+
+    await client.query('COMMIT');
     res.json(rows[0]);
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (client) {
+      await client.query('ROLLBACK');
+    }
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'El código ya existe' });
+    }
+    next(err);
+  } finally {
+    if (client) client.release();
+  }
 });
 
 /**

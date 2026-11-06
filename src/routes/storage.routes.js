@@ -40,7 +40,7 @@ const upload = multer({
  */
 router.post(
   '/upload/:productoId',
-  permitirRoles('administrador', 'bodega'),
+  permitirRoles('bodega'),
   upload.single('imagen'),
   async (req, res, next) => {
     if (!req.file) return res.status(400).json({ error: 'No se recibió ningún archivo' });
