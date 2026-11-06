@@ -227,7 +227,7 @@ const App = (() => {
 
     // Mostrar secciones de admin solo si corresponde
     if (Auth.tieneRol('administrador')) {
-      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+      document.querySelectorAll('.admin-only').forEach(el => el.classList.add('visible'));
     }
 
     // Cargar pedidos para mostrar badge

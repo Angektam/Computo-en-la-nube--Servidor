@@ -920,7 +920,7 @@ tbody tr:hover td { background: #fafbff; }
 .badge-inactivo { background: #f1f3f5; color: #6b7280; border-radius:20px; padding:.2rem .65rem; font-size:.75rem; font-weight:600; }
 
 /* ── Elementos solo admin ──────────────────────────────────── */
-.admin-only { display: none; }
+.admin-only:not(.visible) { display: none; }
 
 /* ── Confirm dialog in modal ───────────────────────────────── */
 .confirm-dialog { text-align:center; padding:.5rem 0; }
