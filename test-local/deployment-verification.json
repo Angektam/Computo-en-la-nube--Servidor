@@ -1,0 +1,156 @@
+{
+  "timestamp": "2026-11-06T21:58:13.449Z",
+  "base": "http://alb-inventario-cloud-los-rojos-727813269.us-east-1.elb.amazonaws.com",
+  "passed": 25,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Contenido publicado coincide: index-1.html",
+      "route": "/index-1.html",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Contenido publicado coincide: js/api.js",
+      "route": "/js/api.js",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Contenido publicado coincide: js/app.js",
+      "route": "/js/app.js",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Contenido publicado coincide: js/dashboard.js",
+      "route": "/js/dashboard.js",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Contenido publicado coincide: js/movimientos.js",
+      "route": "/js/movimientos.js",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Contenido publicado coincide: js/pedidos.js",
+      "route": "/js/pedidos.js",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Contenido publicado coincide: js/reportes.js",
+      "route": "/js/reportes.js",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Servidor y base de datos saludables",
+      "route": "/health",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Ruta API inexistente devuelve JSON",
+      "route": "/api/ruta-inexistente-auditoria",
+      "pass": true,
+      "status": 404
+    },
+    {
+      "name": "Pedidos requieren sesión",
+      "route": "/api/reportes/pedidos",
+      "pass": true,
+      "status": 401
+    },
+    {
+      "name": "Login admin",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "admin: pedidos pendiente",
+      "route": "/api/reportes/pedidos?estado=pendiente",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "admin: pedidos enviado",
+      "route": "/api/reportes/pedidos?estado=enviado",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "admin: pedidos recibido",
+      "route": "/api/reportes/pedidos?estado=recibido",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "admin: pedidos cancelado",
+      "route": "/api/reportes/pedidos?estado=cancelado",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "Validación: /api/productos/no-es-numero",
+      "route": "/api/productos/no-es-numero",
+      "pass": true,
+      "status": 400
+    },
+    {
+      "name": "Validación: /api/movimientos?limit=-1",
+      "route": "/api/movimientos?limit=-1",
+      "pass": true,
+      "status": 400
+    },
+    {
+      "name": "Validación: /api/movimientos?desde=no-es-fecha",
+      "route": "/api/movimientos?desde=no-es-fecha",
+      "pass": true,
+      "status": 400
+    },
+    {
+      "name": "Validación: /api/reportes/gastos?desde=no-es-fecha",
+      "route": "/api/reportes/gastos?desde=no-es-fecha",
+      "pass": true,
+      "status": 400
+    },
+    {
+      "name": "Validación: /api/reportes/gastos?desde=2026-11-06&hasta=2026-11-01",
+      "route": "/api/reportes/gastos?desde=2026-11-06&hasta=2026-11-01",
+      "pass": true,
+      "status": 400
+    },
+    {
+      "name": "Login bodega",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "bodega: pedidos pendiente",
+      "route": "/api/reportes/pedidos?estado=pendiente",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "bodega: pedidos enviado",
+      "route": "/api/reportes/pedidos?estado=enviado",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "bodega: pedidos recibido",
+      "route": "/api/reportes/pedidos?estado=recibido",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "bodega: pedidos cancelado",
+      "route": "/api/reportes/pedidos?estado=cancelado",
+      "pass": true,
+      "status": 200
+    }
+  ]
+}

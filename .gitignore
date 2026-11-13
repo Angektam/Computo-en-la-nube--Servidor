@@ -8,6 +8,13 @@ node_modules/
 .env.*.local
 .env.aws
 
+# Estado y artefactos locales de infraestructura
+.terraform/
+terraform.tfstate*
+*.tfstate.backup
+cdk.out/
+cloudformation-state/
+
 # Certificados y claves
 *.pem
 *.key

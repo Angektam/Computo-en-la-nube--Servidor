@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infraestructura como codigo - Practica 12 - Los Rojos
+
+Parameters:
+  Environment:
+    Type: String
+    Default: practica12
+    AllowedPattern: '^[a-z0-9-]+$'
+
+Resources:
+  InfrastructureBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: LosRojos
+        - Key: Practice
+          Value: P12-IaC-Modificado
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  BucketName:
+    Description: Nombre del bucket creado
+    Value: !Ref InfrastructureBucket
+  BucketArn:
+    Description: ARN del bucket creado
+    Value: !GetAtt InfrastructureBucket.Arn

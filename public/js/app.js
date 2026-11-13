@@ -112,6 +112,10 @@ const Nav = (() => {
   });
 
   function ir(vista) {
+    if (!vistas.includes(vista)) return;
+    if (['categorias', 'usuarios'].includes(vista) && !Auth.tieneRol('administrador')) return;
+    if (vista === 'pedidos' && !Auth.tieneRol('administrador', 'bodega')) return;
+
     document.querySelectorAll('.nav-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.vista === vista)
     );
@@ -125,7 +129,11 @@ const Nav = (() => {
     if (vista === 'dashboard')   Dashboard.cargar();
     if (vista === 'productos')   { Categorias.cargar(); Productos.cargar(); }
     if (vista === 'movimientos') { Productos.cargar(); Movimientos.cargar(1); }
-    if (vista === 'pedidos')     Pedidos.cargar('pendiente');
+    if (vista === 'pedidos') {
+      const filtro = document.getElementById('filtro-estado-pedido');
+      Pedidos.cargar(filtro?.value || 'pendiente');
+      Pedidos.cargarAlertas();
+    }
     if (vista === 'reportes')    Reportes.cargar();
     if (vista === 'categorias')  Categorias.cargar();
     if (vista === 'usuarios')    Usuarios.cargar();
@@ -138,6 +146,13 @@ const Nav = (() => {
         btn._bound = true;
         btn.addEventListener('click', () => Pedidos.cargar(sel?.value || 'pendiente'));
       }
+      const generar = document.getElementById('btn-generar-pedidos');
+      if (generar && !generar._bound) {
+        generar._bound = true;
+        generar.addEventListener('click', () => Pedidos.generar());
+      }
+      const buscar=document.getElementById('pedido-buscar');
+      if(buscar&&!buscar._bound){buscar._bound=true;buscar.addEventListener('keydown',e=>{if(e.key==='Enter')Pedidos.cargar(sel?.value||'pendiente');});}
     }
   }
 
@@ -198,6 +213,7 @@ document.getElementById('btn-cambiar-password')?.addEventListener('click', () =>
       await api.patch(`/usuarios/${usuario.id}/password`, {
         password_actual: actual,
         password_nueva:  nueva,
+        password_confirmacion: conf,
       });
       Modal.cerrar();
       Toast.success('Contraseña actualizada correctamente');
@@ -212,7 +228,13 @@ document.getElementById('btn-cambiar-password')?.addEventListener('click', () =>
 
 // ── Arranque principal ───────────────────────────────────────
 const App = (() => {
+  function prepararModoOffline() {
+    if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(() => {});
+    window.addEventListener('offline-queue-updated', () => Offline?.setEstado());
+  }
+
   function iniciar() {
+    prepararModoOffline();
     const usuario = Auth.getUsuario();
     if (!usuario) return;
 
@@ -226,12 +248,20 @@ const App = (() => {
     document.getElementById('usuario-avatar').textContent = inicial;
 
     // Mostrar secciones de admin solo si corresponde
-    if (Auth.tieneRol('administrador')) {
-      document.querySelectorAll('.admin-only').forEach(el => el.classList.add('visible'));
-    }
+    document.querySelectorAll('.admin-only').forEach(el =>
+      el.classList.toggle('visible', !!Auth.tieneRol('administrador'))
+    );
+    document.querySelectorAll('.admin-report-only').forEach(el =>
+      el.classList.toggle('hidden', !Auth.tieneRol('administrador'))
+    );
 
-    // Cargar pedidos para mostrar badge
-    Pedidos.cargar('pendiente');
+    const puedeVerPedidos = Auth.tieneRol('administrador', 'bodega');
+    document.querySelectorAll('.bodega-only').forEach(el =>
+      el.classList.toggle('hidden', !puedeVerPedidos)
+    );
+
+    // Cargar el badge solo para los roles autorizados.
+    if (puedeVerPedidos) Pedidos.cargar('pendiente');
 
     Nav.ir('dashboard');
   }

@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-11-06T21:50:57.266Z",
+  "region": "us-east-1",
+  "cluster": "ecs-inventario-cloud-los-rojos",
+  "service": "svc-inventario-cloud-los-rojos",
+  "previousTaskDefinition": "arn:aws:ecs:us-east-1:935710521154:task-definition/td-inventario-cloud-los-rojos:13",
+  "taggedImage": "935710521154.dkr.ecr.us-east-1.amazonaws.com/inventario-nube-losrojos:pedidos-20261106-144151",
+  "image": "935710521154.dkr.ecr.us-east-1.amazonaws.com/inventario-nube-losrojos@sha256:c41dae447b8cc3cf172c2b237d46b647eb7fea53e01eb568660ae536394141d7",
+  "desiredCount": 2,
+  "status": "verified",
+  "newTaskDefinition": "arn:aws:ecs:us-east-1:935710521154:task-definition/td-inventario-cloud-los-rojos:14",
+  "verifiedAt": "2026-11-06T21:58:13.449Z"
+}

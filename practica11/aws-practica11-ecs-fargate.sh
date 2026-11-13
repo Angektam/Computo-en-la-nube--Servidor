@@ -54,6 +54,8 @@ CONTAINER_PORT=3000
 # Roles IAM
 EXEC_ROLE_NAME="rol-ecs-exec-$EQUIPO"
 TASK_ROLE_NAME="rol-ecs-task-$EQUIPO"
+DB_SECRET_NAME="ecs/$PROYECTO/$EQUIPO/db-password"
+JWT_SECRET_NAME="ecs/$PROYECTO/$EQUIPO/jwt-secret"
 
 # Security Groups
 SG_ECS_NAME="ecs-sg-$PROYECTO-$EQUIPO"
@@ -466,6 +468,11 @@ echo ""
 # Los valores no sensibles se leen del .env. Los sensibles se leen pero no
 # se imprimen. La dirección de la base de datos va aquí, nunca en la imagen.
 # =============================================================================
+echo "=== [7b/13] Configurando secretos en Secrets Manager ==="
+aws iam put-role-policy \
+  --role-name "$EXEC_ROLE_NAME" \
+  --policy-name "secrets-p11-minimo" \
+  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"secretsmanager:GetSecretValue\"],\"Resource\":[\"arn:aws:secretsmanager:$REGION:$AWS_ACCOUNT_ID:secret:$DB_SECRET_NAME-*\",\"arn:aws:secretsmanager:$REGION:$AWS_ACCOUNT_ID:secret:$JWT_SECRET_NAME-*\"]}]}"
 echo "=== [7/13] Leyendo variables de entorno ==="
 if [ -n "$ENV_FILE" ]; then
   echo "  Archivo .env encontrado: $ENV_FILE"
@@ -518,6 +525,20 @@ echo ""
 
 # =============================================================================
 # PASO 8 — Definir la tarea (task definition)
+DB_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$DB_SECRET_NAME" --query ARN --output text 2>/dev/null || true)
+if [ -z "$DB_SECRET_ARN" ] || [ "$DB_SECRET_ARN" = "None" ]; then
+  DB_SECRET_ARN=$(aws secretsmanager create-secret --name "$DB_SECRET_NAME" --secret-string "$ENV_DB_PASSWORD" --query ARN --output text)
+else
+  aws secretsmanager put-secret-value --secret-id "$DB_SECRET_NAME" --secret-string "$ENV_DB_PASSWORD" >/dev/null
+fi
+JWT_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$JWT_SECRET_NAME" --query ARN --output text 2>/dev/null || true)
+if [ -z "$JWT_SECRET_ARN" ] || [ "$JWT_SECRET_ARN" = "None" ]; then
+  JWT_SECRET_ARN=$(aws secretsmanager create-secret --name "$JWT_SECRET_NAME" --secret-string "$ENV_JWT_SECRET" --query ARN --output text)
+else
+  aws secretsmanager put-secret-value --secret-id "$JWT_SECRET_NAME" --secret-string "$ENV_JWT_SECRET" >/dev/null
+fi
+echo "  Secretos guardados en Secrets Manager; no se imprimen sus valores."
+# La task definition solo referencia ARN; ECS resuelve los valores al iniciar.
 # Indica la imagen del registro, la memoria, el procesador y el puerto.
 # =============================================================================
 echo "=== [8/13] Crear definición de tarea: $TASK_FAMILY ==="
@@ -564,9 +585,11 @@ cat > "$TMP_TD" << TDJSON
         {"name":"DB_SSL","value":"$ENV_DB_SSL"},
         {"name":"DB_SSL_REJECT_UNAUTHORIZED","value":"false"},
         {"name":"S3_BUCKET","value":"$ENV_S3_BUCKET"},
-        {"name":"JWT_EXPIRES_IN","value":"$ENV_JWT_EXPIRES"},
-        {"name":"DB_PASSWORD","value":"$ENV_DB_PASSWORD"},
-        {"name":"JWT_SECRET","value":"$ENV_JWT_SECRET"}
+        {"name":"JWT_EXPIRES_IN","value":"$ENV_JWT_EXPIRES"}
+      ],
+      "secrets": [
+        {"name":"DB_PASSWORD","valueFrom":"$DB_SECRET_ARN"},
+        {"name":"JWT_SECRET","valueFrom":"$JWT_SECRET_ARN"}
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

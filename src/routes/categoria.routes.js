@@ -24,12 +24,15 @@ router.get('/', async (_req, res, next) => {
 
 /** POST /api/categorias — Crea categoría (solo admin) */
 router.post('/', permitirRoles('administrador'), async (req, res, next) => {
-  const { nombre, descripcion } = req.body;
+  const { nombre, descripcion, abreviacion } = req.body;
   if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  if (typeof abreviacion !== 'string' || !/^[A-Z]{2,10}$/.test(abreviacion.trim().toUpperCase())) {
+    return res.status(400).json({ error: 'La abreviaciÃ³n debe tener entre 2 y 10 letras mayÃºsculas' });
+  }
   try {
     const { rows } = await pool.query(
-      'INSERT INTO categorias (nombre, descripcion) VALUES ($1,$2) RETURNING *',
-      [nombre.trim(), descripcion?.trim() || null]
+      'INSERT INTO categorias (nombre, descripcion, abreviacion) VALUES ($1,$2,$3) RETURNING *',
+      [nombre.trim(), descripcion?.trim() || null, abreviacion.trim().toUpperCase()]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -40,12 +43,15 @@ router.post('/', permitirRoles('administrador'), async (req, res, next) => {
 
 /** PUT /api/categorias/:id — Edita categoría (solo admin) */
 router.put('/:id', permitirRoles('administrador'), async (req, res, next) => {
-  const { nombre, descripcion } = req.body;
+  const { nombre, descripcion, abreviacion } = req.body;
   if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  if (typeof abreviacion !== 'string' || !/^[A-Z]{2,10}$/.test(abreviacion.trim().toUpperCase())) {
+    return res.status(400).json({ error: 'La abreviaciÃ³n debe tener entre 2 y 10 letras mayÃºsculas' });
+  }
   try {
     const { rows } = await pool.query(
-      'UPDATE categorias SET nombre=$1, descripcion=$2 WHERE id=$3 RETURNING *',
-      [nombre.trim(), descripcion?.trim() || null, req.params.id]
+      'UPDATE categorias SET nombre=$1, descripcion=$2, abreviacion=$3 WHERE id=$4 RETURNING *',
+      [nombre.trim(), descripcion?.trim() || null, abreviacion.trim().toUpperCase(), req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Categoría no encontrada' });
     res.json(rows[0]);

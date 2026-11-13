@@ -541,4 +541,4 @@ aws ecs update-service \
 | `practica11/evidencia-p11-c5-cero-tareas.sh` | Evidencia: servicio en 0 tareas |
 | `practica11/parar-p11.sh` | Parar todo: 0 tareas + eliminar NAT |
 | `generar_P11.py` | Generador del documento Word |
-| `P11_LosRojos_04nov2026.docx` | Documento de entrega |
+| `docs/entregables/P11_LosRojos_04nov2026.docx` | Documento de entrega |

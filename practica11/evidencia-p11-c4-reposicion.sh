@@ -19,7 +19,7 @@ EQUIPO="los-rojos"
 REGION="us-east-1"
 CLUSTER_NAME="ecs-$PROYECTO-$EQUIPO"
 SERVICE_NAME="svc-$PROYECTO-$EQUIPO"
-DESIRED_COUNT=2
+TEST_DESIRED_COUNT=3
 
 echo "════════════════════════════════════════════════════════════════════"
 echo "  EVIDENCIA P11 — Reposición automática con tiempo cronometrado"
@@ -40,6 +40,14 @@ INITIAL_DESIRED=$(aws ecs describe-services \
   --query "services[0].desiredCount" --output text)
 echo "  Tareas corriendo: $INITIAL_RUNNING"
 echo "  Tareas deseadas:  $INITIAL_DESIRED"
+if [ "$INITIAL_DESIRED" -lt "$TEST_DESIRED_COUNT" ]; then
+  echo "  Ajustando desiredCount a $TEST_DESIRED_COUNT para medir una reposición real..."
+  aws ecs update-service --cluster "$CLUSTER_NAME" --service "$SERVICE_NAME" \
+    --desired-count "$TEST_DESIRED_COUNT" >/dev/null
+  aws ecs wait services-stable --cluster "$CLUSTER_NAME" --services "$SERVICE_NAME"
+fi
+DESIRED_COUNT=$(aws ecs describe-services --cluster "$CLUSTER_NAME" --services "$SERVICE_NAME" \
+  --query "services[0].desiredCount" --output text)
 echo ""
 
 # Listar tareas iniciales
@@ -52,6 +60,13 @@ aws ecs list-tasks \
   --output text | tr '\t' '\n' | while read T; do
   echo "    · $(echo $T | cut -d'/' -f3)"
 done
+INITIAL_TASKS=$(aws ecs list-tasks --cluster "$CLUSTER_NAME" --service-name "$SERVICE_NAME" \
+  --desired-status RUNNING --query "taskArns[]" --output text | tr '\t' '\n')
+INITIAL_COUNT=$(printf '%s\n' "$INITIAL_TASKS" | sed '/^$/d' | wc -l)
+if [ "$INITIAL_COUNT" -lt "$TEST_DESIRED_COUNT" ]; then
+  echo "ERROR: no hay $TEST_DESIRED_COUNT tareas RUNNING; no se medirá la reposición." >&2
+  exit 1
+fi
 
 # ── 2. Detener una tarea a propósito ──────────────────────────────────────────
 echo ""
@@ -110,13 +125,15 @@ while [ "$RETRY" -lt "$MAX_RETRIES" ]; do
 
   ELAPSED=$(( $(date +%s) - START_TIME ))
 
-  # Buscar la tarea NUEVA (que no sea la que detuvimos)
+  # La tarea válida debe ser nueva, no una de las que ya existían antes.
   NEW_TASK=$(aws ecs list-tasks \
     --cluster "$CLUSTER_NAME" \
     --service-name "$SERVICE_NAME" \
     --desired-status RUNNING \
     --query "taskArns" \
-    --output text | tr '\t' '\n' | grep -v "$TASK_SHORT" | head -1) || true
+    --output text | tr '\t' '\n' | while read T; do
+      if ! printf '%s\n' "$INITIAL_TASKS" | grep -q "$T"; then echo "$T"; break; fi
+    done) || true
 
   echo "  [${ELAPSED}s] Tareas RUNNING: $CURRENT_RUNNING / $DESIRED_COUNT  (intento $RETRY/$MAX_RETRIES)"
 

@@ -15,6 +15,25 @@ const Productos = (() => {
     const id = Number(producto.id);
     return Number.isSafeInteger(id) && id > 0 ? id : 0;
   };
+  // Fotos reales y estables para los productos de demostración. Se usan solo
+  // cuando el producto todavía no tiene una imagen propia subida a S3.
+  const fotosProducto = {
+    'ELEC-001': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=85',
+    'ELEC-002': 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=85',
+    'PAP-001': 'https://images.unsplash.com/photo-1455390582262-044cdead?auto=format&fit=crop&w=900&q=85',
+    'PAP-002': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=900&q=85',
+    'HER-001': 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=900&q=85'
+  };
+  const fotosCategoria = {
+    'Electrónica': 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=85',
+    'Papelería': 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=900&q=85',
+    'Herramientas': 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=900&q=85'
+  };
+  const fotoProducto = (producto) => producto.imagen_url || fotosProducto[producto.codigo] || fotosCategoria[producto.categoria] || '';
+  const asegurarFoto = (producto) => {
+    if (producto && !producto.imagen_url) producto.imagen_url = fotoProducto(producto);
+    return producto;
+  };
   const imagenSrc = (value) => {
     try {
       const url = new URL(value, window.location.origin);
@@ -31,6 +50,7 @@ const Productos = (() => {
 
   // ── Render Cards ────────────────────────────────────────────
   function renderCards(lista) {
+    lista.forEach(asegurarFoto);
     const c = document.getElementById('tabla-productos');
     if (!lista.length) {
       c.innerHTML = `<div class="empty-state" style="padding:3rem"><div class="empty-icon">🗂</div><p>No se encontraron productos.</p></div>`;
@@ -73,6 +93,7 @@ const Productos = (() => {
 
   // ── Render Tabla ────────────────────────────────────────────
   function renderTabla(lista) {
+    lista.forEach(asegurarFoto);
     const c = document.getElementById('tabla-productos');
     if (!lista.length) {
       c.innerHTML = `<div class="empty-state" style="padding:2.5rem"><div class="empty-icon">🗂</div><p>No se encontraron productos.</p></div>`;
@@ -125,12 +146,33 @@ const Productos = (() => {
     vistaActual === 'cards' ? renderCards(lista) : renderTabla(lista);
   }
 
+  function listaFiltrada() {
+    const q = document.getElementById('buscar-producto')?.value.toLowerCase().trim() || '';
+    const categoria = document.getElementById('filtro-categoria-producto')?.value || '';
+    return todos.filter(p => {
+      const coincideTexto = !q || [p.nombre, p.codigo, p.categoria].some(valor =>
+        String(valor || '').toLowerCase().includes(q));
+      return coincideTexto && (!categoria || String(p.categoria || '') === categoria);
+    });
+  }
+
+  function cargarFiltroCategorias() {
+    const select = document.getElementById('filtro-categoria-producto');
+    if (!select || typeof Categorias === 'undefined') return;
+    const valorActual = select.value;
+    const categorias = Categorias.getTodas().sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+    select.innerHTML = '<option value="">Todas las categorías</option>' +
+      categorias.map(c => `<option value="${escapeHtml(c.nombre)}">${escapeHtml(c.nombre)}</option>`).join('');
+    select.value = categorias.some(c => c.nombre === valorActual) ? valorActual : '';
+  }
+
   async function cargar() {
     const c = document.getElementById('tabla-productos');
     if (!c) return;
     mostrarCargando('tabla-productos', 'Cargando productos…');
     try {
       todos = await api.get('/productos');
+      cargarFiltroCategorias();
       render(todos);
     } catch (err) {
       mostrarError(c, err.message);
@@ -139,13 +181,8 @@ const Productos = (() => {
   }
 
   // Búsqueda en tiempo real
-  document.getElementById('buscar-producto')?.addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase();
-    render(todos.filter(p =>
-      p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q) ||
-      (p.categoria && p.categoria.toLowerCase().includes(q))
-    ));
-  });
+  document.getElementById('buscar-producto')?.addEventListener('input', () => render(listaFiltrada()));
+  document.getElementById('filtro-categoria-producto')?.addEventListener('change', () => render(listaFiltrada()));
 
   // ── Toggle vista cards / tabla ──────────────────────────────
   function toggleVista(v) {
@@ -153,18 +190,14 @@ const Productos = (() => {
     document.getElementById('btn-vista-cards')?.classList.toggle('active', v === 'cards');
     document.getElementById('btn-vista-tabla')?.classList.toggle('active', v === 'tabla');
     // Mejora #7: usar el mismo criterio de búsqueda (nombre + código + categoría)
-    const q = document.getElementById('buscar-producto')?.value.toLowerCase() || '';
-    render(q ? todos.filter(p =>
-      p.nombre.toLowerCase().includes(q) ||
-      p.codigo.toLowerCase().includes(q) ||
-      (p.categoria && p.categoria.toLowerCase().includes(q))
-    ) : todos);
+    render(listaFiltrada());
   }
 
   // ── Ver detalle producto ────────────────────────────────────
   function verDetalle(id) {
     const p = todos.find(x => x.id === id);
     if (!p) return;
+    asegurarFoto(p);
     const puedeEditar = Auth.tieneRol('bodega');
     Modal.abrir(`
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
@@ -296,7 +329,27 @@ const Productos = (() => {
   function categoriaOptions(selId = '') {
     const cats = typeof Categorias !== 'undefined' ? Categorias.getTodas() : [];
     return `<option value="">— Sin categoría —</option>` +
-      cats.map(c => `<option value="${escapeHtml(c.id)}" ${c.id == selId ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('');
+      cats.map(c => `<option value="${escapeHtml(c.id)}" data-abreviacion="${escapeHtml(c.abreviacion || '')}" ${c.id == selId ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('');
+  }
+
+  function siguienteCodigo(abreviacion) {
+    if (!abreviacion) return '';
+    const patron = new RegExp(`^${abreviacion}-(\\d+)$`, 'i');
+    const maximo = todos.reduce((max, producto) => {
+      const match = patron.exec(producto.codigo || '');
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0);
+    return `${abreviacion}-${String(maximo + 1).padStart(3, '0')}`;
+  }
+
+  function enlazarCategoriaParaCodigo() {
+    const categoria = document.getElementById('f-categoria');
+    const codigo = document.getElementById('f-codigo');
+    if (!categoria || !codigo) return;
+    categoria.addEventListener('change', () => {
+      const abreviacion = categoria.selectedOptions[0]?.dataset.abreviacion;
+      if (abreviacion) codigo.value = siguienteCodigo(abreviacion);
+    });
   }
 
   function formHTML(p = {}) {
@@ -350,6 +403,7 @@ const Productos = (() => {
 
   function nuevo() {
     Modal.abrir(formHTML(), '📦 Nuevo producto');
+    enlazarCategoriaParaCodigo();
     document.getElementById('btn-guardar-producto').onclick = async (e) => {
       const btn = e.currentTarget;
       const errEl = document.getElementById('form-error');

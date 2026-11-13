@@ -2,9 +2,17 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/connection');
 const { verificarToken, permitirRoles } = require('../middleware/auth.middleware');
+const { esEnteroPositivo } = require('../middleware/validation.middleware');
+const { generarPorFaltantes } = require('../services/pedidos.service');
 
 // Todas las rutas requieren autenticación
 router.use(verificarToken);
+router.param('id', (_req, res, next, id) => {
+  if (!esEnteroPositivo(id)) {
+    return res.status(400).json({ error: 'El ID del producto debe ser un número entero positivo' });
+  }
+  next();
+});
 
 /**
  * GET /api/productos
@@ -13,7 +21,7 @@ router.use(verificarToken);
 router.get('/', async (req, res, next) => {
   try {
     const { rows } = await pool.query(`
-      SELECT p.*, c.nombre AS categoria
+      SELECT p.*, c.nombre AS categoria, c.abreviacion AS categoria_abreviacion
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       WHERE p.activo = TRUE
@@ -30,7 +38,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const { rows } = await pool.query(`
-      SELECT p.*, c.nombre AS categoria
+      SELECT p.*, c.nombre AS categoria, c.abreviacion AS categoria_abreviacion
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       WHERE p.id = $1 AND p.activo = TRUE
@@ -47,19 +55,58 @@ router.get('/:id', async (req, res, next) => {
  */
 router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
   const { codigo, nombre, descripcion, categoria_id, precio, stock_actual, stock_minimo, unidad } = req.body;
-  if (!codigo || !nombre) return res.status(400).json({ error: 'Código y nombre son obligatorios' });
+  if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
+  const stock = Number(stock_actual ?? 0);
+  const minimo = Number(stock_minimo ?? 5);
+  if (![stock, minimo].every(value => Number.isInteger(value) && value >= 0 && value <= 2147483647)) {
+    return res.status(400).json({ error: 'El stock y el mínimo deben ser enteros mayores o iguales a 0' });
+  }
+  let client;
   try {
-    const { rows } = await pool.query(`
+    client = await pool.connect();
+    await client.query('BEGIN');
+    let codigoFinal = typeof codigo === 'string' ? codigo.trim() : '';
+    if (!codigoFinal && categoria_id) {
+      const { rows: categoriaRows } = await client.query(
+        'SELECT abreviacion FROM categorias WHERE id=$1',
+        [categoria_id]
+      );
+      const abreviacion = categoriaRows[0]?.abreviacion;
+      if (!abreviacion) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'La categorÃ­a seleccionada no tiene abreviaciÃ³n configurada' });
+      }
+      const { rows: codigos } = await client.query(
+        'SELECT codigo FROM productos WHERE codigo LIKE $1 FOR UPDATE',
+        [`${abreviacion}-%`]
+      );
+      const siguiente = codigos.reduce((max, row) => {
+        const match = new RegExp(`^${abreviacion}-(\\d+)$`, 'i').exec(row.codigo);
+        return match ? Math.max(max, Number(match[1])) : max;
+      }, 0) + 1;
+      codigoFinal = `${abreviacion}-${String(siguiente).padStart(3, '0')}`;
+    }
+    if (!codigoFinal) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'CÃ³digo o categorÃ­a son obligatorios' });
+    }
+    const { rows } = await client.query(`
       INSERT INTO productos (codigo, nombre, descripcion, categoria_id, precio, stock_actual, stock_minimo, unidad)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       RETURNING *
-    `, [codigo, nombre, descripcion, categoria_id, precio || 0, stock_actual || 0, stock_minimo || 5, unidad || 'pieza']);
+    `, [codigoFinal, nombre, descripcion, categoria_id, precio || 0, stock, minimo, unidad || 'pieza']);
+
+    await generarPorFaltantes(client, rows[0].id, req.usuario.id);
+    await client.query('COMMIT');
 
     res.status(201).json(rows[0]);
   } catch (err) {
+    if (client) await client.query('ROLLBACK');
     if (err.code === '23505') return res.status(409).json({ error: 'El código ya existe' });
     next(err);
+  } finally {
+    if (client) client.release();
   }
 });
 
@@ -114,19 +161,13 @@ router.put('/:id', permitirRoles('bodega'), async (req, res, next) => {
     if (stockNuevo !== stockAntes) {
       await client.query(`
         INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad, stock_antes, stock_despues, motivo)
-        VALUES ($1,$2,'ajuste',$3,$4,$3,$5)
-      `, [req.params.id, req.usuario.id, stockNuevo, stockAntes, 'Ajuste de existencias desde edición del producto']);
+        VALUES ($1,$2,'ajuste',$3,$4,$5,$6)
+      `, [req.params.id, req.usuario.id, Math.abs(stockNuevo - stockAntes), stockAntes, stockNuevo, 'Ajuste de existencias desde edición del producto']);
 
-      if (stockNuevo < minimoNum) {
-        await client.query(`
-          INSERT INTO pedidos (producto_id, cantidad_sugerida)
-          SELECT $1, $2
-          WHERE NOT EXISTS (
-            SELECT 1 FROM pedidos WHERE producto_id = $1 AND estado = 'pendiente'
-          )
-        `, [req.params.id, minimoNum * 2]);
-      }
     }
+
+    // También cubre un aumento del mínimo sin cambiar existencias.
+    await generarPorFaltantes(client, req.params.id, req.usuario.id);
 
     await client.query('COMMIT');
     res.json(rows[0]);
@@ -149,7 +190,8 @@ router.put('/:id', permitirRoles('bodega'), async (req, res, next) => {
  */
 router.delete('/:id', permitirRoles('administrador'), async (req, res, next) => {
   try {
-    await pool.query('UPDATE productos SET activo=FALSE WHERE id=$1', [req.params.id]);
+    const result = await pool.query('UPDATE productos SET activo=FALSE, actualizado_en=NOW() WHERE id=$1 AND activo=TRUE', [req.params.id]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Producto no encontrado o ya desactivado' });
     res.json({ mensaje: 'Producto desactivado correctamente' });
   } catch (err) { next(err); }
 });

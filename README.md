@@ -90,6 +90,22 @@ Desarrollar un sistema de gestión de inventarios en la nube para pequeñas empr
 
 ## Estructura del Proyecto
 
+El repositorio está organizado por responsabilidad:
+
+```text
+src/                    Backend Express, rutas, servicios y base de datos
+public/                 Frontend, estilos, PWA y recursos estáticos
+test-local/             Pruebas automatizadas y verificaciones de despliegue
+deploy/                 Scripts de AWS, ECS, ECR y configuración de infraestructura
+scripts/                Herramientas auxiliares y generadores de documentos
+docs/entregables/       Prácticas, reportes y evidencias académicas
+docs/presentaciones/    Presentación E2 en PPTX y PDF
+docs/referencias/       Apuntes y materiales de consulta
+archive/                Artefactos históricos de despliegue
+```
+
+La documentación adicional y el índice de materiales están en [docs/README.md](docs/README.md).
+
 ```
 inventario-nube/
 ├── public/                         ← Frontend (HTML + CSS + JS vanilla)
@@ -196,6 +212,8 @@ bash deploy/deploy.sh usuario@ip-vm
 | GET | `/api/reportes/gastos` | Historial de gastos acumulados | admin |
 | GET | `/api/reportes/corte-diario` | Corte del día | admin, bodega |
 | GET | `/api/reportes/pedidos` | Pedidos automáticos pendientes | admin, bodega |
+| POST | `/api/reportes/pedidos/generar` | Genera pedidos para faltantes actuales, sin duplicar pendientes o enviados | admin, bodega |
+| PATCH | `/api/reportes/pedidos/:id` | Cambia de estado; al recibir registra entrada y suma stock en una transacción | admin, bodega |
 | POST | `/api/storage/upload/:id` | Subir imagen de producto | admin, bodega |
 | GET | `/api/storage/url-firmada/:id` | URL pre-firmada de imagen | todos |
 

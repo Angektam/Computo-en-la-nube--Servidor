@@ -10,9 +10,7 @@ const Reportes = (() => {
   }
 
   function exportarFaltantes() {
-    const token = localStorage.getItem('token');
-    fetch('/api/reportes/export/faltantes', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.blob())
+    api.blob('/reportes/export/faltantes')
       .then(blob => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -21,7 +19,7 @@ const Reportes = (() => {
         URL.revokeObjectURL(a.href);
         Toast.success('CSV descargado');
       })
-      .catch(() => Toast.error('Error al exportar'));
+      .catch(err => Toast.error(err.message));
   }
 
   // ── Faltantes ──────────────────────────────────────────────
@@ -115,17 +113,26 @@ const Reportes = (() => {
 
   // ── Gastos acumulados ──────────────────────────────────────
   async function cargarGastos() {
+    if (!Auth.tieneRol('administrador')) return;
     const desde = document.getElementById('gastos-desde').value;
     const hasta = document.getElementById('gastos-hasta').value;
     const c     = document.getElementById('reporte-gastos');
     const btn   = document.getElementById('btn-gastos');
+
+    if (desde && hasta && desde > hasta) {
+      Toast.error('La fecha inicial debe ser anterior o igual a la final.');
+      return;
+    }
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Consultando…';
     cargando('reporte-gastos');
 
     try {
-      const url = `/reportes/gastos${desde ? `?desde=${desde}&hasta=${hasta}` : ''}`;
+      const params = new URLSearchParams();
+      if (desde) params.set('desde', desde);
+      if (hasta) params.set('hasta', hasta);
+      const url = `/reportes/gastos?${params}`;
       const { totales, por_dia, top_productos, desde: d, hasta: h } = await api.get(url);
 
       c.innerHTML = `
@@ -209,6 +216,7 @@ const Reportes = (() => {
 
   // ── Corte diario ───────────────────────────────────────────
   async function cargarCorte() {
+    if (!Auth.tieneRol('administrador', 'bodega')) return;
     const fecha = document.getElementById('corte-fecha').value;
     const c     = document.getElementById('reporte-corte');
     const btn   = document.getElementById('btn-corte');
@@ -263,6 +271,8 @@ const Reportes = (() => {
   // ── Tabs de reportes ───────────────────────────────────────
   document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.dataset.tab === 'gastos' && !Auth.tieneRol('administrador')) return;
+      if (btn.dataset.tab === 'corte' && !Auth.tieneRol('administrador', 'bodega')) return;
       document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
       btn.classList.add('active');
@@ -282,7 +292,11 @@ const Reportes = (() => {
   document.getElementById('btn-gastos').addEventListener('click', cargarGastos);
   document.getElementById('btn-corte').addEventListener('click', cargarCorte);
 
-  function cargar() { cargarFaltantes(); }
+  function cargar() {
+    document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'faltantes'));
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.toggle('hidden', el.id !== 'tab-faltantes'));
+    cargarFaltantes();
+  }
 
   return { cargar, exportarFaltantes };
 })();

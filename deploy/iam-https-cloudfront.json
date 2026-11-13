@@ -1,0 +1,8 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Sid":"ConsultarDistribuciones","Effect":"Allow","Action":"cloudfront:ListDistributions","Resource":"*"},
+    {"Sid":"CrearDireccionHTTPS","Effect":"Allow","Action":"cloudfront:CreateDistribution","Resource":"*"},
+    {"Sid":"VerificarDistribucion","Effect":"Allow","Action":["cloudfront:GetDistribution","cloudfront:GetDistributionConfig"],"Resource":"arn:aws:cloudfront::935710521154:distribution/*"}
+  ]
+}

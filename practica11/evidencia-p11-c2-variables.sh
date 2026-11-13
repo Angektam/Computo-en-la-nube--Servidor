@@ -27,6 +27,10 @@ aws ecs describe-task-definition \
   --task-definition "$TASK_FAMILY" \
   --query "taskDefinition.containerDefinitions[0].environment" \
   --output json > /tmp/env-vars.json
+aws ecs describe-task-definition \
+  --task-definition "$TASK_FAMILY" \
+  --query "taskDefinition.containerDefinitions[0].secrets" \
+  --output json > /tmp/secret-vars.json
 
 python3 << 'PYEOF'
 import json
@@ -34,7 +38,10 @@ import json
 with open('/tmp/env-vars.json') as f:
     data = json.load(f)
 
-sensitive = {"DB_PASSWORD", "JWT_SECRET"}
+with open('/tmp/secret-vars.json') as f:
+    secret_data = json.load(f)
+
+sensitive = {item["name"] for item in secret_data}
 
 print(f"  {'VARIABLE':<25} {'VALOR':<55} {'TIPO'}")
 print(f"  {'-'*25} {'-'*55} {'-'*10}")
@@ -57,6 +64,9 @@ for env in data:
         display = value
         tipo = "config"
     print(f"  {name:<25} {display:<55} {tipo}")
+print("\n  SECRETOS RESUELTOS POR ECS DESDE SECRETS MANAGER:")
+for item in secret_data:
+    print(f"  {item['name']:<25} ******** (valor nunca visible)  SECRETS MANAGER")
 PYEOF
 
 echo ""
@@ -85,10 +95,10 @@ echo "  DB_HOST         ← endpoint de RDS (práctica 06) ← VA AQUÍ, NO EN L
 echo "  DB_PORT         ← 5432 (PostgreSQL estándar)"
 echo "  DB_NAME         ← nombre de la base de datos"
 echo "  DB_USER         ← usuario de la base de datos"
-echo "  DB_PASSWORD     ← ******** SECRETO (no visible)"
+echo "  DB_PASSWORD     ← ******** SECRETO (Secrets Manager)"
 echo "  DB_SSL          ← true (cifrado en tránsito)"
 echo "  S3_BUCKET       ← bucket del proyecto (práctica 04)"
-echo "  JWT_SECRET      ← ******** SECRETO (no visible)"
+echo "  JWT_SECRET      ← ******** SECRETO (Secrets Manager)"
 echo "  JWT_EXPIRES_IN  ← 8h (duración del token)"
 echo ""
 echo "  TOTAL: 13 variables de entorno inyectadas"

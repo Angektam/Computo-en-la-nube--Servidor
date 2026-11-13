@@ -8,21 +8,44 @@ function getToken() {
 }
 
 async function apiFetch(ruta, opciones = {}) {
+  const { blob = false, ...fetchOpciones } = opciones;
+  const method = (fetchOpciones.method || 'GET').toUpperCase();
   const headers = { 'Content-Type': 'application/json', ...opciones.headers };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const resp = await fetch(`${API_BASE}${ruta}`, { ...opciones, headers });
+  try {
+    const resp = await fetch(`${API_BASE}${ruta}`, { ...fetchOpciones, headers });
+    const result = await leerRespuesta(resp, ruta, blob);
+    if (method === 'GET' && !blob && typeof Offline !== 'undefined') Offline.guardar(ruta, result);
+    return result;
+  } catch (error) {
+    if (method === 'GET' && !blob && typeof Offline !== 'undefined') {
+      const cached = Offline.leer(ruta);
+      if (cached !== null && cached !== undefined) return cached;
+    }
+    if (method !== 'GET' && ruta !== '/auth/login' && typeof Offline !== 'undefined') {
+      Offline.encolar({ ruta, method, body: fetchOpciones.body ? JSON.parse(fetchOpciones.body) : null });
+      return { offlineQueued: true };
+    }
+    throw error;
+  }
+}
 
-  // Token expirado → redirigir al login
-  if (resp.status === 401) {
+async function leerRespuesta(resp, ruta, comoBlob = false) {
+  // Un login incorrecto debe mostrar el error sin recargar el formulario.
+  if (resp.status === 401 && ruta !== '/auth/login') {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
     window.location.reload();
-    return;
+    throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
   }
 
-  const data = await resp.json();
+  if (resp.ok && comoBlob) return resp.blob();
+  if (resp.status === 204) return null;
+  const data = await resp.json().catch(() => {
+    throw new Error(`El servidor devolvió una respuesta inesperada (HTTP ${resp.status}). Intenta nuevamente.`);
+  });
   if (!resp.ok) throw new Error(data.error || `Error ${resp.status}`);
   return data;
 }
@@ -33,6 +56,7 @@ const api = {
   put:    (ruta, body)    => apiFetch(ruta, { method: 'PUT',   body: JSON.stringify(body) }),
   patch:  (ruta, body)    => apiFetch(ruta, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (ruta)          => apiFetch(ruta, { method: 'DELETE' }),
+  blob:   (ruta)          => apiFetch(ruta, { blob: true }),
 
   // Subida de archivos (multipart)
   // Mejora #4: verificar r.ok antes de parsear para no silenciar errores HTTP
@@ -43,11 +67,15 @@ const api = {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: formData,
     });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
-    return data;
+    return leerRespuesta(r, ruta);
   }
 };
+
+function escaparHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+}
 
 // Mejora #6: helper centralizado para el spinner de carga (evita copypaste en todos los módulos)
 function mostrarCargando(elementId, mensaje = 'Cargando…') {

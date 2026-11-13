@@ -22,6 +22,10 @@ app.set('trust proxy', 1);
 // ── Seguridad ──────────────────────────────────────────────────
 // Relajar CSP para permitir que el frontend cargue sus propios scripts/estilos
 app.use(helmet({
+  // El ALB actual expone HTTP; estos encabezados solo son efectivos en un
+  // origen seguro y provocan advertencias del navegador mientras no haya TLS.
+  crossOriginOpenerPolicy: false,
+  originAgentCluster: false,
   contentSecurityPolicy: {
     directives: {
       defaultSrc:              ["'self'"],
@@ -41,18 +45,27 @@ const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
   : [];
 
-app.use(cors({
+app.use((req, res, next) => cors({
   origin: (origin, callback) => {
     // Permitir peticiones sin origen (same-origin, curl, Postman)
     if (!origin) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
-    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    // CloudFront puede reenviar el host/protocolo público de la petición.
+    // Esto permite que el frontend HTTPS y la API compartan origen aunque
+    // el balanceador se comunique internamente por HTTP.
+    const requestOrigin = origin.replace(/\/$/, '');
+    const publicProto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+    const publicHost = req.headers['x-forwarded-host'] || req.headers.host;
+    const samePublicOrigin = publicHost
+      ? `${publicProto}://${publicHost}`.replace(/\/$/, '') === requestOrigin
+      : false;
+    if (samePublicOrigin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     callback(new Error(`CORS: origen no permitido — ${origin}`));
   },
   credentials: true,
-}));
+})(req, res, next));
 
 // Mejora #3: Rate limit general y específico para login
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
@@ -83,6 +96,10 @@ app.use('/api/reportes',      reporteRoutes);
 app.use('/api/storage',       storageRoutes);
 app.use('/api/categorias',    categoriaRoutes);
 app.use('/api/usuarios',      usuarioRoutes);
+app.use('/api/compras',       require('./routes/compras.routes'));
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'Ruta de API no encontrada' });
+});
 
 // ── SPA fallback: cualquier ruta no-API devuelve el index ──────
 app.get(/^(?!\/api).*/, (_req, res) => {
@@ -107,8 +124,15 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT} [${process.env.NODE_ENV}]`);
+async function iniciar() {
+  await require('./db/upgrade-pedidos').upgradePedidos(require('./db/connection'));
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT} [${process.env.NODE_ENV}]`);
+  });
+}
+if (require.main === module) iniciar().catch(err => {
+  console.error('No se pudo preparar el esquema de pedidos:', err.code || err.name);
+  process.exitCode = 1;
 });
 
 module.exports = app;

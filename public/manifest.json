@@ -1,0 +1,11 @@
+{
+  "name": "Inventario Nube Los Rojos",
+  "short_name": "Inventario",
+  "description": "Sistema de gestión de inventarios",
+  "start_url": "/index-1.html",
+  "display": "standalone",
+  "background_color": "#f4f7fa",
+  "theme_color": "#d63031",
+  "lang": "es-MX",
+  "icons": []
+}

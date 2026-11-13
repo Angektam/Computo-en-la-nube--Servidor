@@ -112,12 +112,10 @@ const Movimientos = (() => {
     if (f.tipo)  params.set('tipo', f.tipo);
     if (f.desde) params.set('desde', f.desde);
     if (f.hasta) params.set('hasta', f.hasta);
-    const token = localStorage.getItem('token');
     // Descarga directa via link temporal con header de auth no es posible
     // Usamos fetch + blob
-    const url = `/api/reportes/export/movimientos?${params.toString()}`;
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.blob())
+    const url = `/reportes/export/movimientos?${params.toString()}`;
+    api.blob(url)
       .then(blob => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -126,7 +124,7 @@ const Movimientos = (() => {
         URL.revokeObjectURL(a.href);
         Toast.success('CSV descargado');
       })
-      .catch(() => Toast.error('Error al exportar'));
+      .catch(err => Toast.error(err.message));
   }
 
   // ── Event listeners de filtros ─────────────────────────────

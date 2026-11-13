@@ -1,0 +1,126 @@
+{
+  "timestamp": "2026-11-09T02:59:22.860Z",
+  "base": "http://alb-inventario-cloud-los-rojos-727813269.us-east-1.elb.amazonaws.com",
+  "scope": "HTTP y API; sin navegador; sin escrituras en datos de negocio",
+  "requests": 16,
+  "maxConcurrency": 1,
+  "checks": 16,
+  "passed": 0,
+  "failed": 16,
+  "latencyMs": {},
+  "healthyAfter": false,
+  "results": [
+    {
+      "name": "Página principal de inventario",
+      "route": "/index-1.html",
+      "pass": false,
+      "expectation": "200 y formulario de login",
+      "error": "TypeError"
+    },
+    {
+      "name": "Salud de servidor y base de datos",
+      "route": "/health",
+      "pass": false,
+      "expectation": "200 y db=ok",
+      "error": "TypeError"
+    },
+    {
+      "name": "Sin sesión: /api/productos",
+      "route": "/api/productos",
+      "pass": false,
+      "expectation": "401 JSON",
+      "error": "TypeError"
+    },
+    {
+      "name": "Sin sesión: /api/movimientos?limit=1",
+      "route": "/api/movimientos?limit=1",
+      "pass": false,
+      "expectation": "401 JSON",
+      "error": "TypeError"
+    },
+    {
+      "name": "Sin sesión: /api/reportes/pedidos",
+      "route": "/api/reportes/pedidos",
+      "pass": false,
+      "expectation": "401 JSON",
+      "error": "TypeError"
+    },
+    {
+      "name": "Sin sesión: /api/usuarios",
+      "route": "/api/usuarios",
+      "pass": false,
+      "expectation": "401 JSON",
+      "error": "TypeError"
+    },
+    {
+      "name": "Sin sesión: /api/categorias",
+      "route": "/api/categorias",
+      "pass": false,
+      "expectation": "401 JSON",
+      "error": "TypeError"
+    },
+    {
+      "name": "Sin sesión: /api/reportes/export/faltantes",
+      "route": "/api/reportes/export/faltantes",
+      "pass": false,
+      "expectation": "401 JSON",
+      "error": "TypeError"
+    },
+    {
+      "name": "Token manipulado",
+      "route": "/api/productos",
+      "pass": false,
+      "expectation": "401",
+      "error": "TypeError"
+    },
+    {
+      "name": "Archivo privado /.env",
+      "route": "/.env",
+      "pass": false,
+      "expectation": "Ninguna configuración privada expuesta",
+      "error": "TypeError"
+    },
+    {
+      "name": "Archivo privado /.git/config",
+      "route": "/.git/config",
+      "pass": false,
+      "expectation": "Ninguna configuración privada expuesta",
+      "error": "TypeError"
+    },
+    {
+      "name": "Endpoint API inexistente",
+      "route": "/api/ruta-inexistente-auditoria",
+      "pass": false,
+      "expectation": "404 con error JSON",
+      "error": "TypeError"
+    },
+    {
+      "name": "Login admin",
+      "route": "/api/auth/login",
+      "pass": false,
+      "expectation": "200 y token válido",
+      "error": "TypeError"
+    },
+    {
+      "name": "Login bodega",
+      "route": "/api/auth/login",
+      "pass": false,
+      "expectation": "200 y token válido",
+      "error": "TypeError"
+    },
+    {
+      "name": "Login cajero",
+      "route": "/api/auth/login",
+      "pass": false,
+      "expectation": "200 y token válido",
+      "error": "TypeError"
+    },
+    {
+      "name": "Salud después de las pruebas",
+      "route": "/health",
+      "pass": false,
+      "expectation": "200 y db=ok",
+      "error": "TypeError"
+    }
+  ]
+}

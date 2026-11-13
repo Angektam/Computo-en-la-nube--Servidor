@@ -19,6 +19,16 @@ async function seed() {
         ('Herramientas', 'Herramientas manuales y eléctricas')
       ON CONFLICT (nombre) DO NOTHING;
     `);
+    await client.query(`
+      UPDATE categorias
+      SET abreviacion = CASE
+        WHEN nombre = 'Herramientas' THEN 'HER'
+        WHEN LOWER(nombre) LIKE 'electr%' THEN 'ELEC'
+        WHEN LOWER(nombre) LIKE 'papel%' THEN 'PAP'
+        ELSE abreviacion
+      END
+      WHERE abreviacion IS NULL OR abreviacion = '';
+    `);
 
     // Usuario administrador por defecto
     const hash = await bcrypt.hash('Admin1234!', 10);

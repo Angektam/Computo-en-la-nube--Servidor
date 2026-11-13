@@ -2,6 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/connection');
 const { verificarToken, permitirRoles } = require('../middleware/auth.middleware');
+const { validarFechas, validarPaginacion } = require('../middleware/validation.middleware');
+const { generarPorFaltantes } = require('../services/pedidos.service');
 
 router.use(verificarToken);
 
@@ -10,7 +12,7 @@ router.use(verificarToken);
  * Lista movimientos con paginación y filtros opcionales.
  * Query params: ?page=1&limit=50&tipo=entrada&producto_id=5&desde=YYYY-MM-DD&hasta=YYYY-MM-DD
  */
-router.get('/', async (req, res, next) => {
+router.get('/', validarFechas, validarPaginacion, async (req, res, next) => {
   const page       = Math.max(1, parseInt(req.query.page)  || 1);
   const limit      = Math.min(200, parseInt(req.query.limit) || 50);
   const offset     = (page - 1) * limit;
@@ -88,8 +90,9 @@ router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next
     return res.status(400).json({ error: 'La cantidad debe ser un entero mayor a 0' });
   }
 
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     // Bloquea la fila del producto para evitar condiciones de carrera
@@ -124,29 +127,15 @@ router.post('/', permitirRoles('administrador', 'bodega'), async (req, res, next
       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *
     `, [pid, req.usuario.id, tipo, qty, stockAntes, stockDespues, motivo]);
 
-    // Si el stock queda por debajo del mínimo, generar pedido automático
-    // Solo si NO existe ya un pedido pendiente para este producto (evita duplicados)
-    const { rows: prod2 } = await client.query(
-      'SELECT stock_minimo FROM productos WHERE id=$1', [pid]
-    );
-    if (stockDespues < prod2[0].stock_minimo) {
-      const sugerido = prod2[0].stock_minimo * 2;
-      await client.query(`
-        INSERT INTO pedidos (producto_id, cantidad_sugerida)
-        SELECT $1, $2
-        WHERE NOT EXISTS (
-          SELECT 1 FROM pedidos WHERE producto_id = $1 AND estado = 'pendiente'
-        )
-      `, [pid, sugerido]);
-    }
+    await generarPorFaltantes(client, pid, req.usuario.id);
 
     await client.query('COMMIT');
     res.status(201).json(rows[0]);
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (client) await client.query('ROLLBACK');
     next(err);
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 

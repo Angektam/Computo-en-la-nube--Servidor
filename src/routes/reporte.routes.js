@@ -2,8 +2,12 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/connection');
 const { verificarToken, permitirRoles } = require('../middleware/auth.middleware');
+const { validarFechas, esEnteroPositivo } = require('../middleware/validation.middleware');
+const { generarPorFaltantes, actualizarEstado } = require('../services/pedidos.service');
+const { filtrosPedidos, from: pedidosFrom, select: pedidosSelect, csvCell } = require('../services/pedidos-query.service');
 
 router.use(verificarToken);
+router.use(validarFechas);
 
 // ── Helper: rango de fechas con valor por defecto últimos 30 días ──────
 function rangoFechas(query) {
@@ -197,44 +201,95 @@ router.get('/gastos', permitirRoles('administrador'), async (req, res, next) => 
  * Lista pedidos automáticos. Por defecto solo los pendientes.
  */
 router.get('/pedidos', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
-  const estado = req.query.estado && ESTADOS_PEDIDO.includes(req.query.estado)
-    ? req.query.estado
-    : 'pendiente';
-
   try {
-    const { rows } = await pool.query(`
-      SELECT ped.*, p.codigo, p.nombre AS producto, p.stock_actual, p.stock_minimo
-      FROM   pedidos ped
-      JOIN   productos p ON ped.producto_id = p.id
-      WHERE  ped.estado = $1
-      ORDER BY ped.generado_en DESC
-    `, [estado]);
-    res.json({ total: rows.length, pedidos: rows, estado });
+    const { estado, page, limit, values, where } = filtrosPedidos(req.query);
+    const { rows: counts } = await pool.query(`SELECT COUNT(*)::integer AS total ${pedidosFrom} ${where}`, values);
+    const { rows } = await pool.query(`${pedidosSelect} ${where} ORDER BY ped.generado_en DESC,ped.id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+      [...values, limit, (page - 1) * limit]);
+    const total = Number(counts[0]?.total || 0);
+    res.json({ total, pedidos: rows, estado, page, limit, paginas: Math.ceil(total / limit) });
   } catch (err) { next(err); }
+});
+
+router.get('/pedidos/alertas', permitirRoles('administrador', 'bodega'), async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query(`SELECT
+      (SELECT COUNT(*)::integer FROM productos WHERE activo=TRUE AND stock_actual<=0) AS agotados,
+      (SELECT COUNT(*)::integer FROM productos p WHERE p.activo=TRUE AND p.stock_actual<p.stock_minimo
+        AND NOT EXISTS(SELECT 1 FROM pedidos ped WHERE ped.producto_id=p.id AND ped.estado IN ('pendiente','enviado'))) AS sin_pedido,
+      (SELECT COUNT(*)::integer FROM pedidos WHERE estado IN ('pendiente','enviado') AND entrega_estimada<CURRENT_DATE) AS atrasados,
+      (SELECT COUNT(*)::integer FROM pedidos WHERE estado='enviado' AND cantidad_recibida>0) AS parciales`);
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
+router.get('/export/pedidos', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
+  try {
+    const { values, where } = filtrosPedidos(req.query);
+    const { rows } = await pool.query(`${pedidosSelect} ${where} ORDER BY ped.generado_en DESC,ped.id DESC LIMIT 10001`, values);
+    if (rows.length > 10000) return res.status(400).json({ error: 'La exportación supera 10000 pedidos. Reduce el rango de fechas.' });
+    const header = ['Pedido','Código','Producto','Proveedor','Solicitado','Recibido','Pendiente','Estado','Costo unitario','Costo total','Entrega estimada','Generado'];
+    const lines = rows.map(p => [p.id,p.codigo,p.producto,p.proveedor,p.cantidad_sugerida,p.cantidad_recibida,p.cantidad_pendiente,p.estado,
+      p.costo_unitario,p.costo_total,p.entrega_estimada ? new Date(p.entrega_estimada).toISOString().slice(0,10) : '',new Date(p.generado_en).toISOString()].map(csvCell).join(','));
+    res.setHeader('Content-Type','text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition','attachment; filename="pedidos.csv"');
+    res.send('\uFEFF' + [header.map(csvCell).join(','),...lines].join('\r\n'));
+  } catch (err) { next(err); }
+});
+
+router.get('/pedidos/faltantes', permitirRoles('administrador', 'bodega'), async(req,res,next)=>{
+  try {
+    const agotados=req.query.alerta==='agotados';
+    const {rows}=await pool.query(`SELECT p.id,p.codigo,p.nombre,p.stock_actual,p.stock_minimo FROM productos p
+      WHERE p.activo=TRUE AND ${agotados ? 'p.stock_actual<=0' : `p.stock_actual<p.stock_minimo AND NOT EXISTS
+        (SELECT 1 FROM pedidos ped WHERE ped.producto_id=p.id AND ped.estado IN ('pendiente','enviado'))`}
+      ORDER BY p.stock_actual,p.id LIMIT 200`);
+    res.json({productos:rows});
+  }catch(err){next(err);}
 });
 
 /**
  * PATCH /api/reportes/pedidos/:id
  * Actualiza el estado de un pedido: pendiente → enviado → recibido | cancelado.
  */
+router.post('/pedidos/generar', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const pedidos = await generarPorFaltantes(client, null, req.usuario.id);
+    await client.query('COMMIT');
+    res.status(pedidos.length ? 201 : 200).json({ generados: pedidos.length, pedidos });
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    if (client) client.release();
+  }
+});
+
 router.patch('/pedidos/:id', permitirRoles('administrador', 'bodega'), async (req, res, next) => {
   const { estado } = req.body;
+
+  if (!esEnteroPositivo(req.params.id)) return res.status(400).json({ error: 'El ID del pedido debe ser un número entero positivo' });
 
   if (!ESTADOS_PEDIDO.includes(estado)) {
     return res.status(400).json({ error: `Estado inválido. Use: ${ESTADOS_PEDIDO.join(', ')}` });
   }
 
+  let client;
   try {
-    const { rows } = await pool.query(`
-      UPDATE pedidos
-      SET    estado = $1, actualizado_en = NOW()
-      WHERE  id = $2
-      RETURNING *
-    `, [estado, req.params.id]);
-
-    if (!rows[0]) return res.status(404).json({ error: 'Pedido no encontrado' });
-    res.json(rows[0]);
-  } catch (err) { next(err); }
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const pedido = await actualizarEstado(client, req.params.id, estado, req.usuario.id);
+    await client.query('COMMIT');
+    res.json(pedido);
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    if (client) client.release();
+  }
 });
 
 /**

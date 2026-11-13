@@ -30,7 +30,7 @@ const Categorias = (() => {
       <div class="tabla-wrap">
         <table>
           <thead><tr>
-            <th>ID</th><th>Nombre</th><th>Descripción</th>
+            <th>ID</th><th>Nombre</th><th>Abreviacion</th><th>Descripción</th>
             <th style="text-align:center">Productos</th>
             <th style="text-align:center">Acciones</th>
           </tr></thead>
@@ -39,6 +39,7 @@ const Categorias = (() => {
               <tr>
                 <td style="color:var(--texto-sec)">${escapeHtml(cat.id)}</td>
                 <td><strong>${escapeHtml(cat.nombre)}</strong></td>
+                <td><span class="td-code">${escapeHtml(cat.abreviacion || '—')}</span></td>
                 <td style="color:var(--texto-sec)">${cat.descripcion ? escapeHtml(cat.descripcion) : '<span style="color:var(--gris)">—</span>'}</td>
                 <td style="text-align:center">
                   <span class="badge-info">${cat.total_productos}</span>
@@ -72,6 +73,11 @@ const Categorias = (() => {
     return `
       <div class="form-modal">
         <label>
+          <span class="form-label">Abreviacion *</span>
+          <input id="cat-abreviacion" value="${escapeHtml(cat.abreviacion || '')}" required minlength="2" maxlength="10" pattern="[A-Za-z]{2,10}" style="text-transform:uppercase" placeholder="Ej. HER" />
+          <small class="form-hint">Se usara para generar codigos como HER-002.</small>
+        </label>
+        <label>
           <span class="form-label">Nombre *</span>
           <input id="cat-nombre" value="${escapeHtml(cat.nombre || '')}" required placeholder="Ej. Electrónicos, Ropa, Alimentos…" />
         </label>
@@ -100,6 +106,7 @@ const Categorias = (() => {
       try {
         await api.post('/categorias', {
           nombre:      document.getElementById('cat-nombre').value.trim(),
+          abreviacion: document.getElementById('cat-abreviacion').value.trim().toUpperCase(),
           descripcion: document.getElementById('cat-desc').value.trim(),
         });
         Modal.cerrar();
@@ -127,6 +134,7 @@ const Categorias = (() => {
       try {
         await api.put(`/categorias/${id}`, {
           nombre:      document.getElementById('cat-nombre').value.trim(),
+          abreviacion: document.getElementById('cat-abreviacion').value.trim().toUpperCase(),
           descripcion: document.getElementById('cat-desc').value.trim(),
         });
         Modal.cerrar();

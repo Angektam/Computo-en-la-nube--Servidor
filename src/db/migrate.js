@@ -28,8 +28,20 @@ async function migrate() {
       CREATE TABLE IF NOT EXISTS categorias (
         id          SERIAL PRIMARY KEY,
         nombre      VARCHAR(100) UNIQUE NOT NULL,
-        descripcion TEXT
+        descripcion TEXT,
+        abreviacion VARCHAR(10)
       );
+    `);
+    await client.query('ALTER TABLE categorias ADD COLUMN IF NOT EXISTS abreviacion VARCHAR(10)');
+    await client.query(`
+      UPDATE categorias
+      SET abreviacion = CASE
+        WHEN LOWER(nombre) = 'herramientas' THEN 'HER'
+        WHEN LOWER(nombre) = 'electrónica' THEN 'ELEC'
+        WHEN LOWER(nombre) = 'papelería' THEN 'PAP'
+        ELSE UPPER(REGEXP_REPLACE(LEFT(nombre, 4), '[^A-Za-z]', '', 'g'))
+      END
+      WHERE abreviacion IS NULL OR abreviacion = '';
     `);
 
     // Tabla de productos (inventario)

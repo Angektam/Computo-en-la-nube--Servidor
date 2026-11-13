@@ -23,8 +23,8 @@ router.get('/', permitirRoles('administrador'), async (_req, res, next) => {
 router.post('/', permitirRoles('administrador'), async (req, res, next) => {
   const nombre = typeof req.body.nombre === 'string' ? req.body.nombre.trim() : '';
   const correo = typeof req.body.correo === 'string' ? req.body.correo.trim().toLowerCase() : '';
-  const { password, rol } = req.body;
-  if (!nombre || !correo || typeof password !== 'string' || !rol) {
+  const { password, password_confirmacion, rol } = req.body;
+  if (!nombre || !correo || typeof password !== 'string' || typeof password_confirmacion !== 'string' || !rol) {
     return res.status(400).json({ error: 'Nombre, correo, contraseña y rol son obligatorios' });
   }
   if (nombre.length > 100 || correo.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
@@ -35,6 +35,9 @@ router.post('/', permitirRoles('administrador'), async (req, res, next) => {
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+  }
+  if (password !== password_confirmacion) {
+    return res.status(400).json({ error: 'Las contraseñas no coinciden' });
   }
   try {
     const hash = await bcrypt.hash(password, 10);
@@ -52,7 +55,7 @@ router.post('/', permitirRoles('administrador'), async (req, res, next) => {
 /** PUT /api/usuarios/:id — Edita nombre, rol y estado */
 router.put('/:id', permitirRoles('administrador'), async (req, res, next) => {
   const nombre = typeof req.body.nombre === 'string' ? req.body.nombre.trim() : '';
-  const { rol, activo } = req.body;
+  const { rol, activo, password, password_confirmacion } = req.body;
   if (!nombre || !rol) return res.status(400).json({ error: 'Nombre y rol son obligatorios' });
   if (nombre.length > 100) return res.status(400).json({ error: 'El nombre no puede superar 100 caracteres' });
   if (!['administrador', 'bodega', 'cajero'].includes(rol)) {
@@ -61,11 +64,28 @@ router.put('/:id', permitirRoles('administrador'), async (req, res, next) => {
   if (activo !== undefined && typeof activo !== 'boolean') {
     return res.status(400).json({ error: 'El estado del usuario debe ser verdadero o falso' });
   }
+  const cambiaPassword = password !== undefined || password_confirmacion !== undefined;
+  if (cambiaPassword) {
+    if (typeof password !== 'string' || typeof password_confirmacion !== 'string') {
+      return res.status(400).json({ error: 'Debes capturar y confirmar la nueva contraseña' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+    if (password !== password_confirmacion) {
+      return res.status(400).json({ error: 'Las contraseñas no coinciden' });
+    }
+  }
   try {
-    const { rows } = await pool.query(
-      'UPDATE usuarios SET nombre=$1, rol=$2, activo=$3 WHERE id=$4 RETURNING id, nombre, correo, rol, activo, creado_en',
-      [nombre, rol, activo !== undefined ? activo : true, req.params.id]
-    );
+    const valores = [nombre, rol, activo !== undefined ? activo : true];
+    let consulta = 'UPDATE usuarios SET nombre=$1, rol=$2, activo=$3';
+    if (cambiaPassword) {
+      valores.push(await bcrypt.hash(password, 10));
+      consulta += `, password=$${valores.length}`;
+    }
+    valores.push(req.params.id);
+    consulta += ` WHERE id=$${valores.length} RETURNING id, nombre, correo, rol, activo, creado_en`;
+    const { rows } = await pool.query(consulta, valores);
     if (!rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(rows[0]);
   } catch (err) { next(err); }
@@ -73,7 +93,7 @@ router.put('/:id', permitirRoles('administrador'), async (req, res, next) => {
 
 /** PATCH /api/usuarios/:id/password — Cambia contraseña */
 router.patch('/:id/password', async (req, res, next) => {
-  const { password_actual, password_nueva } = req.body;
+  const { password_actual, password_nueva, password_confirmacion } = req.body;
   // Admin puede cambiar cualquiera; el usuario solo la suya
   const esAdmin = req.usuario.rol === 'administrador';
   const esPropietario = req.usuario.id === parseInt(req.params.id);
@@ -83,6 +103,9 @@ router.patch('/:id/password', async (req, res, next) => {
   }
   if (!password_nueva || password_nueva.length < 6) {
     return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+  }
+  if (password_nueva !== password_confirmacion) {
+    return res.status(400).json({ error: 'Las contraseñas no coinciden' });
   }
 
   try {

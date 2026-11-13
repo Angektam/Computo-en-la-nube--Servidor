@@ -99,6 +99,20 @@ const Usuarios = (() => {
           <span class="form-label">Contraseña * (mín. 6 caracteres)</span>
           <input id="u-password" type="password" minlength="6" autocomplete="new-password" required placeholder="Mínimo 6 caracteres" />
         </label>` : ''}
+        ${!u.id ? `
+        <label>
+          <span class="form-label">Confirmar contraseña *</span>
+          <input id="u-password-confirmacion" type="password" minlength="6" autocomplete="new-password" required placeholder="Repite la contraseña" />
+        </label>` : `
+        <div class="form-section-title" style="margin-top:.25rem">Restablecer contraseña (opcional)</div>
+        <label>
+          <span class="form-label">Nueva contraseña</span>
+          <input id="u-password" type="password" minlength="6" autocomplete="new-password" placeholder="Déjalo vacío para conservarla" />
+        </label>
+        <label>
+          <span class="form-label">Confirmar nueva contraseña</span>
+          <input id="u-password-confirmacion" type="password" minlength="6" autocomplete="new-password" placeholder="Repite la nueva contraseña" />
+        </label>`}
         <label>
           <span class="form-label">Rol *</span>
           <select id="u-rol" required>
@@ -135,14 +149,22 @@ const Usuarios = (() => {
       e.preventDefault();
       const btn   = document.getElementById('btn-guardar-user');
       const errEl = document.getElementById('user-error');
+      const password = document.getElementById('u-password')?.value || '';
+      const passwordConfirmacion = document.getElementById('u-password-confirmacion')?.value || '';
       errEl.classList.add('hidden');
+      if (password !== passwordConfirmacion) {
+        errEl.textContent = 'Las contraseñas no coinciden';
+        errEl.classList.remove('hidden');
+        return;
+      }
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Creando…';
       try {
         await api.post('/usuarios', {
           nombre:   document.getElementById('u-nombre').value.trim(),
           correo:   document.getElementById('u-correo').value.trim(),
-          password: document.getElementById('u-password').value,
+          password,
+          password_confirmacion: passwordConfirmacion,
           rol:      document.getElementById('u-rol').value,
         });
         Modal.cerrar();
@@ -170,15 +192,27 @@ const Usuarios = (() => {
       e.preventDefault();
       const btn   = document.getElementById('btn-guardar-user');
       const errEl = document.getElementById('user-error');
+      const password = document.getElementById('u-password')?.value || '';
+      const passwordConfirmacion = document.getElementById('u-password-confirmacion')?.value || '';
       errEl.classList.add('hidden');
+      if ((password || passwordConfirmacion) && password !== passwordConfirmacion) {
+        errEl.textContent = 'Las contraseñas no coinciden';
+        errEl.classList.remove('hidden');
+        return;
+      }
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Guardando…';
       try {
-        await api.put(`/usuarios/${id}`, {
+        const cambios = {
           nombre: document.getElementById('u-nombre').value.trim(),
           rol:    document.getElementById('u-rol').value,
           activo: document.getElementById('u-activo').checked,
-        });
+        };
+        if (password || passwordConfirmacion) {
+          cambios.password = password;
+          cambios.password_confirmacion = passwordConfirmacion;
+        }
+        await api.put(`/usuarios/${id}`, cambios);
         Modal.cerrar();
         // Mejora #8: el JWT del usuario editado no se invalida automáticamente.
         // Su nuevo rol/estado entrará en vigor cuando su token actual expire (máx. 8h)

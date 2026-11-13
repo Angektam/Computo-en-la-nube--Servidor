@@ -1,0 +1,35 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ActualizarServicioInventario",
+      "Effect": "Allow",
+      "Action": ["ecs:DescribeServices", "ecs:UpdateService"],
+      "Resource": "arn:aws:ecs:us-east-1:935710521154:service/ecs-inventario-cloud-los-rojos/svc-inventario-cloud-los-rojos"
+    },
+    {
+      "Sid": "ConsultarDefinicionDeTarea",
+      "Effect": "Allow",
+      "Action": "ecs:DescribeTaskDefinition",
+      "Resource": "*"
+    },
+    {
+      "Sid": "RegistrarRevisionInventario",
+      "Effect": "Allow",
+      "Action": "ecs:RegisterTaskDefinition",
+      "Resource": "arn:aws:ecs:us-east-1:935710521154:task-definition/td-inventario-cloud-los-rojos:*"
+    },
+    {
+      "Sid": "UsarRolesDeTareaInventario",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::935710521154:role/rol-ecs-exec-los-rojos",
+        "arn:aws:iam::935710521154:role/rol-ecs-task-los-rojos"
+      ],
+      "Condition": {
+        "StringEquals": {"iam:PassedToService": "ecs-tasks.amazonaws.com"}
+      }
+    }
+  ]
+}

@@ -4,11 +4,11 @@
 # ═══════════════════════════════════════════════════════════════════════
 
 # ── Etapa 1: imagen base ────────────────────────────────────────────────
-# Usamos la variante "alpine" de Node 20 LTS porque:
+# Usamos la variante "alpine" de Node 22 porque:
 #   • Alpine Linux pesa ~5 MB frente a los ~900 MB de la imagen Debian completa.
-#   • Node 20 es la versión LTS activa (soporte hasta abril 2026).
+#   • Las dependencias de Supabase instaladas requieren Node >=22.
 #   • La etiqueta "alpine" es imagen oficial del Docker Hub, auditada y mantenida.
-FROM node:20-alpine
+FROM node:22-alpine
 
 # ── Etapa 2: directorio de trabajo ─────────────────────────────────────
 # Todos los comandos siguientes se ejecutan dentro de /app.
@@ -28,7 +28,7 @@ COPY package.json package-lock.json ./
 #   • Respeta exactamente las versiones del package-lock.json.
 # "--omit=dev" excluye devDependencies (nodemon, docx…) que no se necesitan
 # en producción, reduciendo el tamaño final de la imagen.
-RUN npm ci --omit=dev
+RUN NODE_OPTIONS=--dns-result-order=ipv4first npm ci --omit=dev
 
 # ── Etapa 5: copiar el código fuente y el frontend ──────────────────────
 # Ahora sí se copia el resto del proyecto. Al estar después de "npm ci",
